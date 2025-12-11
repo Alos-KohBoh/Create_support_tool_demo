@@ -1,0 +1,1967 @@
+:root {
+    --primary-color: #0078d4;
+    --primary-hover: #106ebe;
+    --secondary-color: #605e5c;
+    --accent-color: #00b294;
+    --danger-color: #d13438;
+    --warning-color: #ffb900;
+    --success-color: #107c10;
+    --info-color: #0078d4;
+    --light-bg: #faf9f8;
+    --card-bg: #ffffff;
+    --card-hover: #f3f2f1;
+    --input-bg: #ffffff;
+    --input-border: #d2d0ce;
+    --text-primary: #323130;
+    --text-secondary: #605e5c;
+    --border-color: #edebe9;
+    --border-light: #d2d0ce;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: var(--light-bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 32px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary-color);
+    border-radius: 8px 8px 0 0;
+}
+
+header h1 {
+    font-size: 2em;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95em;
+    font-weight: 400;
+}
+
+main {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 20px;
+}
+
+main.single-column {
+    grid-template-columns: 1fr;
+}
+
+.results-section {
+    display: block;
+}
+
+.results-section.hidden {
+    display: none;
+}
+
+@media (max-width: 1024px) {
+    main {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ホーム画面 */
+.home-screen {
+    padding: 20px 0;
+}
+
+.home-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.home-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 40px 32px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.home-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.home-card-icon {
+    font-size: 4em;
+    margin-bottom: 16px;
+}
+
+.home-card h2 {
+    color: var(--text-primary);
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-bottom: 12px;
+    border: none;
+    padding: 0;
+}
+
+.home-card p {
+    color: var(--text-secondary);
+    font-size: 0.95em;
+    margin: 0;
+}
+
+/* セクション画面 */
+.section-screen {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section-header {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 1.75em;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.btn-back {
+    padding: 10px 20px;
+    background: var(--light-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.95em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.btn-back:hover {
+    background: var(--card-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* フォームカラム（キャラクター作成用） */
+.form-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.form-column h3 {
+    color: var(--primary-color);
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .form-columns {
+        grid-template-columns: 1fr;
+    }
+    
+    .home-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card h2 {
+    margin-bottom: 20px;
+    color: var(--text-primary);
+    font-size: 1.25em;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.card-header-with-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.card-header-with-action h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.card h3 {
+    margin: 16px 0 10px;
+    color: var(--text-primary);
+    font-size: 1.05em;
+    font-weight: 600;
+}
+
+/* フォーム要素 */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 0.95em;
+    font-family: 'Segoe UI', sans-serif;
+    transition: all 0.2s ease;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 60px;
+    font-family: 'Segoe UI', sans-serif;
+    line-height: 1.5;
+}
+
+.form-control:hover {
+    border-color: var(--text-secondary);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.btn {
+    padding: 8px 16px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex: 1;
+    min-width: 100px;
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+.btn:hover {
+    background: var(--card-hover);
+    border-color: var(--text-secondary);
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--border-color);
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+}
+
+.btn-secondary:hover {
+    background: #797775;
+    border-color: #797775;
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    color: white;
+    border-color: var(--danger-color);
+}
+
+.btn-danger:hover {
+    background: #a4262c;
+    border-color: #a4262c;
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: white;
+    border-color: var(--success-color);
+}
+
+.btn-success:hover {
+    background: #0b6a0b;
+    border-color: #0b6a0b;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    min-width: auto;
+}
+
+.btn:disabled,
+.btn-small:disabled {
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn:disabled:hover,
+.btn-small:disabled:hover {
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-info {
+    background: var(--info-color);
+    color: white;
+    border-color: var(--info-color);
+}
+
+.btn-info:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+/* ボタングループ */
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* モンスター情報 */
+.monster-info {
+    background: var(--light-bg);
+    padding: 15px;
+    border-radius: 6px;
+    margin: 15px 0;
+    border: 1px solid var(--border-color);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--card-bg);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.info-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.info-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.monster-info .description-text {
+    margin: 15px 0;
+    padding: 12px;
+    background: var(--card-bg);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 4px;
+}
+
+/* タブ */
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    background: var(--card-bg);
+    padding: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9em;
+}
+
+.tab-btn:hover {
+    background: var(--card-hover);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* メインタブ */
+.main-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--card-bg);
+    padding: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.main-tab-btn {
+    flex: 1;
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.95em;
+}
+
+.main-tab-btn:hover {
+    background: var(--card-hover);
+    color: var(--text-primary);
+}
+
+.main-tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+    font-weight: 600;
+}
+
+.main-tab-content {
+    display: none;
+}
+
+.main-tab-content.active {
+    display: block;
+}
+
+/* サブタブ */
+.sub-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--light-bg);
+    padding: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.sub-tab-btn {
+    flex: 1;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95em;
+}
+
+.sub-tab-btn:hover {
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+.sub-tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.sub-tab-content {
+    display: none;
+}
+
+.sub-tab-content.active {
+    display: block;
+}
+
+/* フィルターバー */
+.filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: var(--light-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.filter-input,
+.filter-select {
+    flex: 1;
+    min-width: 150px;
+    padding: 8px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.list-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+/* 結果表示 */
+.results-content {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.results-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.results-content::-webkit-scrollbar-track {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.results-content::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    margin: 8px 0;
+    background: var(--light-bg);
+    border-radius: 6px;
+    border-left: 3px solid var(--primary-color);
+    transition: all 0.2s;
+    border: 1px solid var(--border-color);
+}
+
+.result-item:hover {
+    background: var(--card-hover);
+    border-left-width: 4px;
+}
+
+.result-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.result-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.result-value {
+    font-weight: 600;
+    color: var(--primary-color);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.result-percentage {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-left: 10px;
+}
+
+.empty-message {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 40px;
+    font-size: 1em;
+}
+
+/* ドロップアイテム表示 */
+.drop-items-list {
+    margin-top: 15px;
+}
+
+.drop-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin: 5px 0;
+    background: var(--light-bg);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.drop-item-name {
+    font-weight: 500;
+}
+
+.drop-item-prob {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* ログ */
+.log-content {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.log-item {
+    display: flex;
+    padding: 10px 15px;
+    margin: 5px 0;
+    background: var(--light-bg);
+    border-radius: 4px;
+    font-size: 0.9em;
+    border: 1px solid var(--border-color);
+}
+
+.log-number {
+    color: var(--text-secondary);
+    margin-right: 15px;
+    min-width: 80px;
+}
+
+.log-item-name {
+    color: var(--text-primary);
+}
+
+/* モーダル */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
+    animation: slideIn 0.3s;
+}
+
+.modal-large {
+    max-width: 700px;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.close {
+    color: var(--text-secondary);
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.close:hover {
+    color: var(--text-primary);
+    background: var(--card-hover);
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    background: var(--light-bg);
+    border-radius: 0 0 8px 8px;
+}
+
+/* ドロップアイテム設定 */
+.drop-item-config {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 12px;
+    background: var(--light-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.drop-item-config:hover {
+    background: var(--card-hover);
+}
+
+.drop-item-config select,
+.drop-item-config input {
+    flex: 1;
+}
+
+.drop-item-config button {
+    padding: 8px 16px;
+}
+
+.prob-preview {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    padding: 2px 4px;
+    min-height: 18px;
+}
+
+.probability-total {
+    margin-top: 15px;
+    padding: 12px 16px;
+    background: var(--light-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.warning {
+    color: var(--warning-color);
+    margin-left: 10px;
+}
+
+.info-message {
+    margin-left: 10px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.help-text {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #f3f9fd;
+    border-radius: 6px;
+    border-left: 3px solid var(--info-color);
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.system-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.system-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.system-section h3 {
+    font-size: 1.1em;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+/* チャート */
+#dropChart {
+    max-height: 500px;
+}
+
+/* マスタ管理 */
+.master-section {
+    margin-bottom: 30px;
+}
+
+.master-section h3 {
+    color: var(--text-primary);
+    font-size: 1.1em;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.master-fields-list,
+.rarity-list,
+.danger-list,
+.item-type-list {
+    margin-bottom: 16px;
+}
+
+.master-field-item,
+.rarity-item,
+.danger-item,
+.item-type-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--light-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.master-field-item:hover,
+.rarity-item:hover,
+.danger-item:hover,
+.item-type-item:hover {
+    background: var(--card-hover);
+    border-color: var(--primary-color);
+}
+
+.master-field-item.dragging,
+.rarity-item.dragging,
+.danger-item.dragging,
+.item-type-item.dragging {
+    opacity: 0.5;
+    border-color: var(--primary-color);
+    background-color: #e6f0ff;
+}
+
+.field-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.field-label {
+    min-width: 120px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.field-value {
+    flex: 1;
+    padding: 6px 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 0.9em;
+}
+
+.field-type {
+    min-width: 100px;
+    padding: 4px 10px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.85em;
+    text-align: center;
+}
+
+.field-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.field-actions .btn {
+    min-width: 60px;
+    padding: 6px 12px;
+    font-size: 0.85em;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.8em;
+    min-width: 50px;
+}
+
+.master-empty {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-secondary);
+    font-size: 0.95em;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    header {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    header h1 {
+        font-size: 1.5em;
+    }
+    
+    header p {
+        font-size: 0.9em;
+    }
+    
+    main {
+        grid-template-columns: 1fr;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .tabs {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    
+    .tab {
+        font-size: 0.9em;
+        padding: 10px 12px;
+    }
+    
+    .card {
+        padding: 16px;
+    }
+    
+    /* モーダル調整 */
+    .modal-content {
+        width: 95%;
+        margin: 20px auto;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.2em;
+    }
+    
+    .modal-body {
+        padding: 16px;
+    }
+    
+    /* フォーム調整 */
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .form-group label {
+        font-size: 0.9em;
+    }
+    
+    .form-group input,
+    .form-group select {
+        font-size: 16px; /* iOSズーム防止 */
+    }
+    
+    /* ドロップアイテム設定 */
+    .drop-item-config {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .drop-item-config select,
+    .drop-item-config input {
+        width: 100%;
+    }
+    
+    .drop-item-config button {
+        width: 100%;
+    }
+    
+    /* モンスターリスト */
+    .monster-actions {
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+    }
+    
+    .monster-actions .btn {
+        width: 100%;
+        font-size: 0.85em;
+        padding: 8px;
+    }
+    
+    /* シミュレーション結果 */
+    .simulation-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .simulation-controls input {
+        width: 100%;
+    }
+    
+    .result-item {
+        font-size: 0.9em;
+        padding: 8px;
+    }
+    
+    /* マスタ管理 */
+    .add-master-form {
+        flex-direction: column;
+    }
+    
+    .add-master-form input,
+    .add-master-form select {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .add-master-form button {
+        width: 100%;
+    }
+    
+    .master-field-item,
+    .rarity-item,
+    .danger-item,
+    .item-type-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .field-info {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .field-label {
+        min-width: unset;
+    }
+    
+    .field-actions {
+        width: 100%;
+    }
+    
+    .field-actions .btn {
+        flex: 1;
+        min-width: unset;
+    }
+    
+    /* チャート */
+    #dropChart {
+        max-height: 300px;
+    }
+    
+    /* テーブル */
+    table {
+        font-size: 0.85em;
+    }
+    
+    table th,
+    table td {
+        padding: 8px 6px;
+    }
+}
+
+/* タブレット用 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        max-width: 95%;
+    }
+    
+    .modal-content {
+        width: 80%;
+    }
+    
+    .drop-item-config {
+        flex-wrap: wrap;
+    }
+    
+    .drop-item-config select,
+    .drop-item-config input {
+        min-width: 200px;
+    }
+}
+
+/* データ一覧表示 */
+.data-list-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.monster-card,
+.item-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease;
+}
+
+.monster-card:hover,
+.item-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.monster-card-header,
+.item-card-header {
+    padding: 16px;
+    background: var(--light-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.monster-card-header h3,
+.item-card-header h3 {
+    font-size: 1.1em;
+    color: var(--text-primary);
+    margin: 0;
+    flex: 1;
+}
+
+.monster-badges,
+.item-badges {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-danger {
+    background: #fff4ce;
+    color: var(--warning-color);
+    border: 1px solid var(--warning-color);
+}
+
+.badge-rarity {
+    background: #e6f0ff;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.badge-type {
+    background: #f3f2f1;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.description-text {
+    padding: 12px 16px;
+    background: var(--light-bg);
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    line-height: 1.6;
+    border-left: 3px solid var(--primary-color);
+    margin: 0 16px 12px 16px;
+    border-radius: 4px;
+}
+
+.effect-text {
+    padding: 10px 16px;
+    background: #e6f7ff;
+    color: var(--text-primary);
+    font-size: 0.85em;
+    line-height: 1.5;
+    border-left: 3px solid var(--accent-color);
+    margin: 0 16px 12px 16px;
+    border-radius: 4px;
+}
+
+.effect-text strong {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.monster-card-body {
+    padding: 16px;
+}
+
+.monster-card-body h4 {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.drop-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.drop-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: var(--light-bg);
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+.drop-item-row .item-name {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.drop-item-row .item-prob {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.monster-card-footer,
+.item-card-footer {
+    padding: 12px 16px;
+    background: var(--light-bg);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.empty-message {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 24px;
+    font-size: 0.9em;
+}
+
+/* カード画像 */
+.card-image {
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+    background: var(--light-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* キャラクターカード */
+.character-stats {
+    margin: 12px 0;
+    padding: 12px;
+    background: var(--light-bg);
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.stat-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 6px;
+}
+
+.stat-row:last-child {
+    margin-bottom: 0;
+}
+
+.stat-row span {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.character-personality,
+.character-skills {
+    margin: 8px 0;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.character-personality strong,
+.character-skills strong {
+    color: var(--text-primary);
+}
+
+/* モーダルサイズ調整 */
+.modal-large .modal-content {
+    max-width: 900px;
+}
+
+/* プロット管理 */
+.chapter-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.chapter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.chapter-info h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.25em;
+    color: var(--text-primary);
+}
+
+.chapter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.chapter-description {
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    line-height: 1.6;
+}
+
+.chapter-scenes {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.chapter-scenes h4 {
+    font-size: 1em;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.scene-list {
+    list-style: none;
+    padding: 0;
+}
+
+.scene-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--light-bg);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.scene-title {
+    flex: 1;
+    font-weight: 500;
+}
+
+.scene-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.empty-message-small {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+/* シーンカード（シーン一覧タブ用） */
+.scene-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.scene-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.scene-card h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.15em;
+    color: var(--text-primary);
+}
+
+.scene-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.scene-content {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    line-height: 1.6;
+    margin: 12px 0;
+}
+
+.scene-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* タイムラインビュー */
+.timeline-view {
+    padding: 20px;
+}
+
+
+
+.form-help {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+/* 鞄関連スタイル */
+.bag-capacity {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--card-bg);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+}
+
+.bag-capacity-info {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.capacity-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.capacity-item label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.capacity-number {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.bag-controls {
+    display: flex;
+    gap: 8px;
+}
+
+#bagItemsList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bag-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--card-bg);
+    border-radius: 6px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s;
+}
+
+.bag-item:hover {
+    background: var(--card-hover);
+    box-shadow: var(--shadow-md);
+}
+
+.bag-item-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.bag-item-quantity {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-right: 16px;
+}
+
+.bag-item-actions button {
+    padding: 6px 12px;
+    font-size: 0.9em;
+}
+
+.empty-message {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-secondary);
+    font-size: 1.1em;
+}
+
+#bagItemOperationModal .item-info {
+    background: var(--light-bg);
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+}
+
+#bagItemOperationModal .item-info p {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+#bagItemOperationModal .item-info p:last-child {
+    margin-bottom: 0;
+}
+
+#bagItemOperationModal .item-info strong {
+    color: var(--text-primary);
+}
+
+#bagItemOperationModal .item-info span {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+#bagItemOperationModal .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+#bagItemOperationModal .modal-actions button {
+    flex: 1;
+    max-width: 150px;
+}
+
+/* 作品カードスタイル */
+.work-item {
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: white;
+    transition: all 0.2s;
+}
+
+.work-item:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+}
+
+.work-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.work-header h3 {
+    margin: 0;
+    font-size: 1.2em;
+    color: var(--text-primary);
+}
+
+.work-description {
+    color: var(--text-secondary);
+    margin: 12px 0;
+    line-height: 1.6;
+}
+
+.work-meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.work-meta small {
+    color: var(--text-secondary);
+    font-size: 0.85em;
+}
+
+/* 現在の作品情報 */
+.current-work-info {
+    padding: 12px 16px;
+    background: var(--secondary-bg);
+    border-radius: 6px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.current-work-info strong {
+    color: var(--text-primary);
+    font-size: 1.05em;
+}
+
+.current-work-info .help-text {
+    margin: 4px 0 0 0;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+/* プロット画面 */
+.plot-screen {
+    width: 100%;
+}
+
+.current-work-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.current-work-header h2 {
+    margin: 0;
+}
+
+/* 章内のシーンセクション */
+.chapter-scenes-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.scenes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.scenes-header h4 {
+    margin: 0;
+    font-size: 1em;
+    color: var(--text-secondary);
+}
+
+.scene-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scene-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--secondary-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+}
+
+.scene-item:hover {
+    background: white;
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.scene-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.scene-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.scene-title {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.scene-meta {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    background: var(--card-bg);
+    border-radius: 4px;
+}
+
+.scene-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.empty-scene-message {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 20px;
+    margin: 0;
+}
+
+.btn-xs {
+    padding: 4px 8px;
+    font-size: 0.8em;
+}
+
+/* タイムライン表示 */
+.timeline-view {
+    padding: 16px 0;
+}
+
+.timeline-events {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.timeline-event-card {
+    padding: 20px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s;
+}
+
+.timeline-event-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+}
+
+.timeline-event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.timeline-event-info h3 {
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+    font-size: 1.2em;
+}
+
+.timeline-timestamp {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--secondary-bg);
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.timeline-event-description {
+    margin: 12px 0 0 0;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.timeline-event-actions {
+    display: flex;
+    gap: 8px;
+}
+

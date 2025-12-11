@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>制作補助ツール</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>制作補助ツール</h1>
+            <p class="subtitle">ガチャシミュレーション / データ管理 / プロット作成</p>
+        </header>
+
+        <!-- ホーム画面 -->
+        <div id="homeScreen" class="home-screen">
+            <div class="home-cards">
+                <div class="home-card" data-section="simulation-section">
+                    <div class="home-card-icon">📊</div>
+                    <h2>シミュレーション</h2>
+                    <p>ガチャシミュレーションと鞄管理</p>
+                </div>
+                <div class="home-card" data-section="data-section">
+                    <div class="home-card-icon">📝</div>
+                    <h2>データ作成・管理</h2>
+                    <p>キャラクター・モンスター・アイテム管理</p>
+                </div>
+                <div class="home-card" data-section="plot-section">
+                    <div class="home-card-icon">📖</div>
+                    <h2>プロット作成・管理</h2>
+                    <p>ストーリー構成とシーン管理</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- シミュレーションセクション -->
+        <div id="simulation-section" class="section-screen" style="display: none;">
+            <div class="section-header">
+                <button class="btn-back" data-back="home">← ホームに戻る</button>
+                <h2>シミュレーション</h2>
+            </div>
+            <main>
+                <!-- コントロールパネル -->
+                <section class="control-panel">
+                    <!-- タブナビゲーション -->
+                    <div class="main-tabs">
+                        <button class="main-tab-btn active" data-tab="simulation">ガチャ</button>
+                        <button class="main-tab-btn" data-tab="bag">鞄</button>
+                    </div>
+
+                <!-- シミュレーションタブ -->
+                <div id="simulation" class="main-tab-content active">
+                    <div class="card">
+                        <h2>シミュレーション設定</h2>
+                        
+                        <div class="form-group">
+                            <label for="monsterSelect">モンスター選択</label>
+                            <select id="monsterSelect" class="form-control">
+                                <option value="">-- モンスターを選択 --</option>
+                            </select>
+                        </div>
+
+                        <div id="monsterInfo" class="monster-info" style="display: none;">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">危険度:</span>
+                                    <span id="monsterDanger" class="info-value"></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">レア度:</span>
+                                    <span id="monsterRarity" class="info-value"></span>
+                                </div>
+                            </div>
+                            
+                            <div id="monsterDescriptionDisplay" class="description-text" style="display: none;"></div>
+                            
+                            <h3>ドロップテーブル</h3>
+                            <div id="dropTable" class="drop-table"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="trialCount">試行回数</label>
+                            <input type="number" id="trialCount" class="form-control" value="100" min="1" max="100000">
+                        </div>
+
+                        <div class="button-group">
+                            <button id="runSimulation" class="btn btn-primary" disabled>
+                                ガチャ開始
+                            </button>
+                            <button id="calculateExpected" class="btn btn-secondary" disabled>
+                                期待値計算
+                            </button>
+                            <button id="clearResults" class="btn btn-danger">
+                                結果クリア
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                    <!-- 鞄タブ -->
+                    <div id="bag" class="main-tab-content">
+                    <div class="card">
+                        <div class="bag-capacity">
+                            <div class="bag-capacity-info">
+                                <div class="capacity-item">
+                                    <label>現在:</label>
+                                    <span id="currentCount" class="capacity-number">0</span>個
+                                </div>
+                                <div class="capacity-item">
+                                    <label>最大:</label>
+                                    <span id="maxCapacity" class="capacity-number">1000</span>個
+                                </div>
+                            </div>
+                            <div class="bag-controls">
+                                <button id="addBagItemBtn" class="btn btn-success">アイテム追加</button>
+                                <button id="bagSettingsBtn" class="btn btn-secondary">設定</button>
+                                <button id="clearBagBtn" class="btn btn-danger">クリア</button>
+                            </div>
+                        </div>
+
+                        <div id="bagItemsList" class="bag-items-list">
+                            <div class="empty-message">鞄は空です</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- データ管理タブ -->
+                <div id="datamanage" class="main-tab-content">
+                    <!-- サブタブ -->
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" data-subtab="monsters">モンスター一覧</button>
+                        <button class="sub-tab-btn" data-subtab="items">アイテム一覧</button>
+                    </div>
+
+                    <!-- モンスター一覧サブタブ -->
+                    <div id="monsters" class="sub-tab-content active">
+                        <div class="card">
+                            <div class="list-header">
+                                <h2>モンスター一覧</h2>
+                                <button id="addMonsterBtn" class="btn btn-success">
+                                    モンスター追加
+                                </button>
+                            </div>
+                            
+                            <!-- フィルター -->
+                            <div class="filter-bar">
+                                <input type="text" id="monsterNameFilter" class="filter-input" placeholder="名前で検索...">
+                                <select id="monsterDangerFilter" class="filter-select">
+                                    <option value="">危険度: すべて</option>
+                                </select>
+                                <select id="monsterRarityFilter" class="filter-select">
+                                    <option value="">レア度: すべて</option>
+                                </select>
+                                <button id="clearMonsterFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
+                            </div>
+
+                            <div id="monsterListView" class="data-list-view">
+                                <!-- モンスター一覧を動的に生成 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- アイテム一覧サブタブ -->
+                    <div id="items" class="sub-tab-content">
+                        <div class="card">
+                            <div class="list-header">
+                                <h2>アイテム一覧</h2>
+                                <button id="addItemBtn" class="btn btn-success">
+                                    アイテム追加
+                                </button>
+                            </div>
+
+                            <!-- フィルター -->
+                            <div class="filter-bar">
+                                <input type="text" id="itemNameFilter" class="filter-input" placeholder="名前で検索...">
+                                <select id="itemTypeFilter" class="filter-select">
+                                    <option value="">種類: すべて</option>
+                                </select>
+                                <select id="itemRarityFilter" class="filter-select">
+                                    <option value="">レア度: すべて</option>
+                                </select>
+                                <button id="clearItemFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
+                            </div>
+
+                            <div id="itemListView" class="data-list-view">
+                                <!-- アイテム一覧を動的に生成 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>システム</h2>
+                        
+                        <div class="system-section">
+                            <h3>データバックアップ</h3>
+                            <div class="button-group">
+                                <button id="exportDataBtn" class="btn btn-info">
+                                    データをエクスポート
+                                </button>
+                                <button id="importDataBtn" class="btn btn-info">
+                                    データをインポート
+                                </button>
+                            </div>
+                            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                            <p class="help-text">
+                                エクスポート: すべてのデータをJSONファイルとしてダウンロード<br>
+                                インポート: JSONファイルからデータを復元
+                            </p>
+                        </div>
+
+                        <div class="system-section">
+                            <h3>データリセット</h3>
+                            <div class="button-group">
+                                <button id="resetDataBtn" class="btn btn-danger">
+                                    データリセット
+                                </button>
+                            </div>
+                            <p class="help-text">
+                                すべてのデータを削除してサンプルデータを再読み込みします
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- マスタ管理タブ -->
+                <div id="master" class="main-tab-content">
+                    <div class="card">
+                        <h2>マスタ情報管理</h2>
+                        
+                        <!-- モンスター設定可能項目 -->
+                        <div class="master-section">
+                            <h3>モンスター項目設定</h3>
+                            <div class="master-fields-list" id="monsterFieldsList">
+                                <!-- 動的に生成 -->
+                            </div>
+                            <button id="addMonsterFieldBtn" class="btn btn-info">
+                                モンスター項目を追加
+                            </button>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                        <!-- アイテム設定可能項目 -->
+                        <div class="master-section">
+                            <h3>アイテム項目設定</h3>
+                            <div class="master-fields-list" id="itemFieldsList">
+                                <!-- 動的に生成 -->
+                            </div>
+                            <button id="addItemFieldBtn" class="btn btn-info">
+                                アイテム項目を追加
+                            </button>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                        <!-- レアリティ管理 -->
+                        <div class="master-section">
+                            <h3>レアリティ設定（モンスター）</h3>
+                            <div class="rarity-list" id="monsterRarityList">
+                                <!-- 動的に生成 -->
+                            </div>
+                            <button id="addMonsterRarityBtn" class="btn btn-info">
+                                モンスターレアリティを追加
+                            </button>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                        <div class="master-section">
+                            <h3>レアリティ設定（アイテム）</h3>
+                            <div class="rarity-list" id="itemRarityList">
+                                <!-- 動的に生成 -->
+                            </div>
+                            <button id="addItemRarityBtn" class="btn btn-info">
+                                アイテムレアリティを追加
+                            </button>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                        <!-- 危険度管理 -->
+                        <div class="master-section">
+                            <h3>危険度設定</h3>
+                            <div class="danger-list" id="dangerLevelList">
+                                <!-- 動的に生成 -->
+                            </div>
+                            <button id="addDangerLevelBtn" class="btn btn-info">
+                                危険度を追加
+                            </button>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                        <!-- アイテム種類管理 -->
+                        <div class="master-section">
+                            <h3>アイテム種類設定</h3>
+                            <div class="item-type-list" id="itemTypeList">
+                                <!-- 動的に生成 -->
+                            </div>
+                            <button id="addItemTypeBtn" class="btn btn-info">
+                                アイテム種類を追加
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                </section>
+
+                <!-- 結果表示エリア(シミュレーションタブのみ表示) -->
+                <section class="results-section" id="resultsSection">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="results">集計結果</button>
+                    <button class="tab-btn" data-tab="expected">期待値</button>
+                    <button class="tab-btn" data-tab="log">ログ</button>
+                    <button class="tab-btn" data-tab="chart">グラフ</button>
+                </div>
+
+                <!-- 集計結果タブ -->
+                <div id="results" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header-with-action">
+                            <h2>集計結果</h2>
+                            <button id="addResultsToBag" class="btn btn-success" style="display: none;">
+                                すべて鞄に入れる
+                            </button>
+                        </div>
+                        <div id="resultsContent" class="results-content">
+                            <p class="empty-message">ガチャを実行してください</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 期待値タブ -->
+                <div id="expected" class="tab-content">
+                    <div class="card">
+                        <h2>期待値</h2>
+                        <div id="expectedContent" class="results-content">
+                            <p class="empty-message">期待値を計算してください</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ログタブ -->
+                <div id="log" class="tab-content">
+                    <div class="card">
+                        <h2>ガチャログ (最新100件)</h2>
+                        <div id="logContent" class="log-content">
+                            <p class="empty-message">ガチャ履歴がありません</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- グラフタブ -->
+                <div id="chart" class="tab-content">
+                    <div class="card">
+                        <h2>ドロップ分布グラフ</h2>
+                        <canvas id="dropChart"></canvas>
+                    </div>
+                </div>
+            </section>
+            </main>
+        </div>
+
+        <!-- データ作成・管理セクション -->
+        <div id="data-section" class="section-screen" style="display: none;">
+            <div class="section-header">
+                <button class="btn-back" data-back="home">← ホームに戻る</button>
+                <h2>データ作成・管理</h2>
+            </div>
+            
+            <!-- サブタブ -->
+            <div class="main-tabs">
+                <button class="main-tab-btn active" data-tab="characters">キャラクター</button>
+                <button class="main-tab-btn" data-tab="monsters">モンスター</button>
+                <button class="main-tab-btn" data-tab="items">アイテム</button>
+                <button class="main-tab-btn" data-tab="master">マスタ設定</button>
+                <button class="main-tab-btn" data-tab="system">システム</button>
+            </div>
+
+            <!-- キャラクタータブ（新規） -->
+            <div id="characters" class="main-tab-content active">
+                <div class="card">
+                    <div class="list-header">
+                        <h2>キャラクター一覧</h2>
+                        <button id="addCharacterBtn" class="btn btn-success">
+                            キャラクター追加
+                        </button>
+                    </div>
+                    
+                    <!-- フィルター -->
+                    <div class="filter-bar">
+                        <input type="text" id="characterNameFilter" class="filter-input" placeholder="名前で検索...">
+                        <select id="characterJobFilter" class="filter-select">
+                            <option value="">職業: すべて</option>
+                        </select>
+                        <select id="characterRaceFilter" class="filter-select">
+                            <option value="">種族: すべて</option>
+                        </select>
+                        <button id="clearCharacterFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
+                    </div>
+
+                    <div id="characterListView" class="data-list-view">
+                        <div class="empty-message">キャラクターが登録されていません</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- モンスタータブ -->
+            <div id="monsters" class="main-tab-content">
+                <div class="card">
+                    <div class="list-header">
+                        <h2>モンスター一覧</h2>
+                        <button id="addMonsterBtn" class="btn btn-success">
+                            モンスター追加
+                        </button>
+                    </div>
+                    
+                    <!-- フィルター -->
+                    <div class="filter-bar">
+                        <input type="text" id="monsterNameFilter" class="filter-input" placeholder="名前で検索...">
+                        <select id="monsterDangerFilter" class="filter-select">
+                            <option value="">危険度: すべて</option>
+                        </select>
+                        <select id="monsterRarityFilter" class="filter-select">
+                            <option value="">レア度: すべて</option>
+                        </select>
+                        <button id="clearMonsterFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
+                    </div>
+
+                    <div id="monsterListView" class="data-list-view">
+                        <!-- モンスター一覧を動的に生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- アイテムタブ -->
+            <div id="items" class="main-tab-content">
+                <div class="card">
+                    <div class="list-header">
+                        <h2>アイテム一覧</h2>
+                        <button id="addItemBtn" class="btn btn-success">
+                            アイテム追加
+                        </button>
+                    </div>
+
+                    <!-- フィルター -->
+                    <div class="filter-bar">
+                        <input type="text" id="itemNameFilter" class="filter-input" placeholder="名前で検索...">
+                        <select id="itemTypeFilter" class="filter-select">
+                            <option value="">種類: すべて</option>
+                        </select>
+                        <select id="itemRarityFilter" class="filter-select">
+                            <option value="">レア度: すべて</option>
+                        </select>
+                        <button id="clearItemFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
+                    </div>
+
+                    <div id="itemListView" class="data-list-view">
+                        <!-- アイテム一覧を動的に生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- マスタ設定タブ -->
+            <div id="master" class="main-tab-content">
+                <div class="card">
+                    <h2>マスタ情報管理</h2>
+                    
+                    <!-- モンスター設定可能項目 -->
+                    <div class="master-section">
+                        <h3>モンスター項目設定</h3>
+                        <div class="master-fields-list" id="monsterFieldsList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addMonsterFieldBtn" class="btn btn-info">
+                            モンスター項目を追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- アイテム設定可能項目 -->
+                    <div class="master-section">
+                        <h3>アイテム項目設定</h3>
+                        <div class="master-fields-list" id="itemFieldsList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addItemFieldBtn" class="btn btn-info">
+                            アイテム項目を追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- レアリティ管理 -->
+                    <div class="master-section">
+                        <h3>レアリティ設定（モンスター）</h3>
+                        <div class="rarity-list" id="monsterRarityList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addMonsterRarityBtn" class="btn btn-info">
+                            モンスターレアリティを追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <div class="master-section">
+                        <h3>レアリティ設定（アイテム）</h3>
+                        <div class="rarity-list" id="itemRarityList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addItemRarityBtn" class="btn btn-info">
+                            アイテムレアリティを追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- 危険度管理 -->
+                    <div class="master-section">
+                        <h3>危険度設定</h3>
+                        <div class="danger-list" id="dangerLevelList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addDangerLevelBtn" class="btn btn-info">
+                            危険度を追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- アイテム種類管理 -->
+                    <div class="master-section">
+                        <h3>アイテム種類設定</h3>
+                        <div class="item-type-list" id="itemTypeList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addItemTypeBtn" class="btn btn-info">
+                            アイテム種類を追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- キャラクター職業管理 -->
+                    <div class="master-section">
+                        <h3>キャラクター職業設定</h3>
+                        <div class="character-job-list" id="characterJobList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addCharacterJobBtn" class="btn btn-info">
+                            職業を追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- キャラクター種族管理 -->
+                    <div class="master-section">
+                        <h3>キャラクター種族設定</h3>
+                        <div class="character-race-list" id="characterRaceList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addCharacterRaceBtn" class="btn btn-info">
+                            種族を追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- キャラクター属性管理 -->
+                    <div class="master-section">
+                        <h3>キャラクター属性設定</h3>
+                        <div class="character-element-list" id="characterElementList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addCharacterElementBtn" class="btn btn-info">
+                            属性を追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- キャラクターステータス項目管理 -->
+                    <div class="master-section">
+                        <h3>キャラクターステータス項目設定</h3>
+                        <div class="character-stats-list" id="characterStatsList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addCharacterStatBtn" class="btn btn-info">
+                            ステータス項目を追加
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- システムタブ -->
+            <div id="system" class="main-tab-content">
+                <div class="card">
+                    <h2>システム</h2>
+                    
+                    <div class="system-section">
+                        <h3>データバックアップ</h3>
+                        <div class="button-group">
+                            <button id="exportDataBtn" class="btn btn-info">
+                                データをエクスポート
+                            </button>
+                            <button id="importDataBtn" class="btn btn-info">
+                                データをインポート
+                            </button>
+                        </div>
+                        <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                        <p class="help-text">
+                            エクスポート: すべてのデータをJSONファイルとしてダウンロード<br>
+                            インポート: JSONファイルからデータを復元
+                        </p>
+                    </div>
+
+                    <div class="system-section">
+                        <h3>データリセット</h3>
+                        <div class="button-group">
+                            <button id="resetDataBtn" class="btn btn-danger">
+                                データリセット
+                            </button>
+                        </div>
+                        <p class="help-text">
+                            すべてのデータを削除してサンプルデータを再読み込みします
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- プロット作成・管理セクション -->
+        <div id="plot-section" class="section-screen" style="display: none;">
+            <!-- 作品一覧画面 -->
+            <div id="work-list-screen" class="plot-screen active">
+                <div class="section-header">
+                    <button class="btn-back" data-back="home">← ホームに戻る</button>
+                    <h2>プロット作成・管理</h2>
+                </div>
+                
+                <div class="card">
+                    <div class="list-header">
+                        <h2>作品一覧</h2>
+                        <button id="addWorkBtn" class="btn btn-success">
+                            新規作品を作成
+                        </button>
+                    </div>
+                    
+                    <div id="workListView" class="data-list-view">
+                        <div class="empty-message">作品が作成されていません</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 章管理画面 -->
+            <div id="chapter-edit-screen" class="plot-screen" style="display: none;">
+                <div class="section-header">
+                    <button class="btn-back" onclick="app.backToWorkList()">← 作品一覧に戻る</button>
+                    <div class="current-work-header" id="currentWorkHeader">
+                        <h2 id="currentWorkTitle">作品タイトル</h2>
+                        <span class="badge badge-info" id="currentWorkGenre"></span>
+                    </div>
+                </div>
+                
+                <!-- タブメニュー -->
+                <div class="main-tabs">
+                    <button class="main-tab-btn active" data-tab="chapters-content">章/エピソード</button>
+                    <button class="main-tab-btn" data-tab="timeline-content">タイムライン</button>
+                </div>
+
+                <!-- 章管理タブ -->
+                <div id="chapters-content" class="main-tab-content active">
+                    <div class="card">
+                        <div class="list-header">
+                            <h2>章/エピソード管理</h2>
+                            <button id="addChapterBtn" class="btn btn-success">
+                                章を追加
+                            </button>
+                        </div>
+                        
+                        <div id="chapterListView" class="data-list-view">
+                            <div class="empty-message">章が作成されていません</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- タイムラインタブ -->
+                <div id="timeline-content" class="main-tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="list-header">
+                            <h2>タイムライン</h2>
+                            <button id="addTimelineEventBtn" class="btn btn-success">
+                                イベントを追加
+                            </button>
+                        </div>
+                        
+                        <div id="timelineView" class="timeline-view">
+                            <div class="empty-message">タイムラインイベントが作成されていません</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- キャラクター追加モーダル（新規） -->
+    <div id="characterModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>キャラクター作成</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-columns">
+                    <div class="form-column">
+                        <h3>基本情報</h3>
+                        <div class="form-group">
+                            <label for="characterName">キャラクター名</label>
+                            <input type="text" id="characterName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="characterJob">職業</label>
+                            <select id="characterJob" class="form-control">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="characterRace">種族</label>
+                            <select id="characterRace" class="form-control">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="characterElement">属性</label>
+                            <select id="characterElement" class="form-control">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="characterLevel">レベル</label>
+                            <input type="number" id="characterLevel" class="form-control" value="1" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="characterImageUrl">画像URL (任意)</label>
+                            <input type="url" id="characterImageUrl" class="form-control" placeholder="https://example.com/image.png">
+                        </div>
+                    </div>
+                    <div class="form-column">
+                        <h3>パラメータ</h3>
+                        <div id="characterStatsFields">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="characterPersonality">性格</label>
+                    <input type="text" id="characterPersonality" class="form-control" placeholder="例: 勇敢で正義感が強い">
+                </div>
+                <div class="form-group">
+                    <label for="characterBackground">背景ストーリー</label>
+                    <textarea id="characterBackground" class="form-control" rows="4" placeholder="キャラクターの過去や背景を記述"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="characterDialogues">セリフ集 (改行で区切る)</label>
+                    <textarea id="characterDialogues" class="form-control" rows="4" placeholder="セリフ1&#10;セリフ2&#10;セリフ3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="characterSkills">スキル/特技 (改行で区切る)</label>
+                    <textarea id="characterSkills" class="form-control" rows="3" placeholder="ファイアボール&#10;回復魔法&#10;剣術"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveCharacter" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 作品作成モーダル -->
+    <div id="workModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>作品作成</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="workTitle">作品タイトル</label>
+                    <input type="text" id="workTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="workGenre">ジャンル</label>
+                    <select id="workGenre" class="form-control">
+                        <option value="">-- ジャンルを選択 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="workDescription">説明</label>
+                    <textarea id="workDescription" class="form-control" rows="4" placeholder="作品の概要を記述"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveWork" class="btn btn-primary">作成</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 章追加モーダル -->
+    <div id="chapterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>章作成</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="chapterTitle">章タイトル</label>
+                    <input type="text" id="chapterTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="chapterDescription">説明</label>
+                    <textarea id="chapterDescription" class="form-control" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="chapterStatus">ステータス</label>
+                    <select id="chapterStatus" class="form-control">
+                        <option value="not-started">未着手</option>
+                        <option value="in-progress">執筆中</option>
+                        <option value="completed">完了</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveChapter" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- シーン追加モーダル -->
+    <div id="sceneModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>シーン作成</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sceneChapter">所属章</label>
+                    <select id="sceneChapter" class="form-control" required>
+                        <option value="">-- 章を選択 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="sceneTitle">シーンタイトル</label>
+                    <input type="text" id="sceneTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="sceneLocation">場所</label>
+                    <input type="text" id="sceneLocation" class="form-control" placeholder="例: 王城、森の中">
+                </div>
+                <div class="form-group">
+                    <label for="sceneTimeOfDay">時間帯</label>
+                    <input type="text" id="sceneTimeOfDay" class="form-control" placeholder="例: 朝、夜">
+                </div>
+                <div class="form-group">
+                    <label for="sceneCharacters">登場キャラクター</label>
+                    <select id="sceneCharacters" class="form-control" multiple size="5">
+                        <!-- キャラクター一覧を動的に生成 -->
+                    </select>
+                    <small class="form-help">Ctrlキーを押しながらクリックで複数選択</small>
+                </div>
+                <div class="form-group">
+                    <label for="sceneContent">内容</label>
+                    <textarea id="sceneContent" class="form-control" rows="8" placeholder="シーンの詳細を記述"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="sceneNotes">メモ</label>
+                    <textarea id="sceneNotes" class="form-control" rows="3" placeholder="メモ・アイデア"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveScene" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- タイムラインイベント追加モーダル -->
+    <div id="timelineEventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>タイムラインイベント作成</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="timelineEventTitle">イベントタイトル</label>
+                    <input type="text" id="timelineEventTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="timelineEventChapter">章</label>
+                    <select id="timelineEventChapter" class="form-control">
+                        <option value="">-- 章を選択（任意）--</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="timelineEventTimeOfDay">時間帯</label>
+                    <select id="timelineEventTimeOfDay" class="form-control">
+                        <option value="">-- 時間帯を選択（任意）--</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="timelineEventTimestamp">タイムスタンプ</label>
+                    <input type="text" id="timelineEventTimestamp" class="form-control" placeholder="例: 第1章開始、3日目午前">
+                </div>
+                <div class="form-group">
+                    <label for="timelineEventDescription">説明</label>
+                    <textarea id="timelineEventDescription" class="form-control" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveTimelineEvent" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- モンスター追加モーダル -->
+    <div id="monsterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>モンスター追加</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="monsterName">モンスター名</label>
+                    <input type="text" id="monsterName" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="monsterDangerInput">危険度</label>
+                    <select id="monsterDangerInput" class="form-control">
+                        <!-- マスタ管理から動的に生成 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="monsterRarityInput">レア度(モンスター)</label>
+                    <select id="monsterRarityInput" class="form-control">
+                        <!-- マスタ管理から動的に生成 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="monsterImageUrl">画像URL (任意)</label>
+                    <input type="url" id="monsterImageUrl" class="form-control" placeholder="https://example.com/image.png">
+                    <small class="form-help">画像URLを入力すると一覧で表示されます</small>
+                </div>
+                <div class="form-group">
+                    <label for="monsterDescription">説明 (任意)</label>
+                    <textarea id="monsterDescription" class="form-control" rows="3" placeholder="モンスターの説明を入力"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveMonster" class="btn btn-primary">追加</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- アイテム追加モーダル -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>アイテム追加</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="itemName">アイテム名</label>
+                    <input type="text" id="itemName" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="itemType">種類</label>
+                    <select id="itemType" class="form-control">
+                        <!-- マスタ管理から動的に生成 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="itemRarity">レア度(アイテム)</label>
+                    <select id="itemRarity" class="form-control">
+                        <!-- マスタ管理から動的に生成 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="itemImageUrl">画像URL (任意)</label>
+                    <input type="url" id="itemImageUrl" class="form-control" placeholder="https://example.com/image.png">
+                    <small class="form-help">画像URLを入力すると一覧で表示されます</small>
+                </div>
+                <div class="form-group">
+                    <label for="itemDescription">説明 (任意)</label>
+                    <textarea id="itemDescription" class="form-control" rows="2" placeholder="アイテムの説明を入力"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="itemEffect">効果 (任意)</label>
+                    <textarea id="itemEffect" class="form-control" rows="2" placeholder="アイテムの効果を入力"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveItem" class="btn btn-primary">追加</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ドロップ設定モーダル -->
+    <div id="dropModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>ドロップテーブル設定</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="dropMonsterSelect">モンスター選択</label>
+                    <select id="dropMonsterSelect" class="form-control">
+                        <option value="">-- モンスターを選択 --</option>
+                    </select>
+                </div>
+                <div id="dropItemsContainer" style="display: none;">
+                    <h3>ドロップアイテム設定</h3>
+                    <div id="dropItemsList"></div>
+                    <button id="addDropItem" class="btn btn-success">➕ ドロップアイテム追加</button>
+                    <div class="probability-total">
+                        合計確率: <span id="totalProbability">0</span>%
+                        <span id="probabilityWarning" class="info-message" style="display: none;">
+                        </span>
+                    </div>
+                    <p class="help-text">
+                        💡 確率は100%である必要はありません。<br>
+                        ・合計100%未満: 何もドロップしない可能性<br>
+                        ・合計100%超過: 複数アイテムのドロップ可能性<br>
+                        ・個別100%超過: そのアイテムが複数個ドロップ<br>
+                        ・最小設定: 0.00000001% (100億分の1)<br>
+                        ・最大設定: 10000% (100倍)
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveDrops" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 鞄容量設定モーダル -->
+    <div id="bagSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>鞄容量設定</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="bagCapacity">最大容量</label>
+                    <input type="number" id="bagCapacity" class="form-control" value="1000" min="1" max="999999">
+                </div>
+                <p class="help-text">
+                    鞄の最大所持数を設定します。容量を超えた場合、新しいアイテムは追加されません。
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button id="saveBagSettings" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- アイテム追加モーダル -->
+    <div id="bagItemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>アイテム追加</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="bagItemSelect">アイテム</label>
+                    <select id="bagItemSelect" class="form-control">
+                        <option value="">-- アイテムを選択 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bagItemQuantity">個数</label>
+                    <input type="number" id="bagItemQuantity" class="form-control" value="1" min="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="addBagItem" class="btn btn-success">追加</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- アイテム操作モーダル -->
+    <div id="bagItemOperationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>アイテム操作</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="item-info">
+                    <p><strong>アイテム:</strong> <span id="currentItemName"></span></p>
+                    <p><strong>所持数:</strong> <span id="currentItemQuantity"></span>個</p>
+                </div>
+                <div class="form-group">
+                    <label for="itemOperationQuantity">個数</label>
+                    <input type="number" id="itemOperationQuantity" class="form-control" value="1" min="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button id="useBagItem" class="btn btn-primary">使用</button>
+                    <button id="removeBagItem" class="btn btn-danger">削除</button>
+                    <button class="btn btn-secondary close-modal">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/models.js"></script>
+    <script src="js/character.js"></script>
+    <script src="js/work.js"></script>
+    <script src="js/plot.js"></script>
+    <script src="js/master.js"></script>
+    <script src="js/simulator.js"></script>
+    <script src="js/bag.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+

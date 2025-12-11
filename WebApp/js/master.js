@@ -1,0 +1,814 @@
+// マスタ情報管理モジュール
+
+class MasterDataManager {
+    constructor() {
+        this.masterConfig = this.loadMasterConfig();
+    }
+
+    // マスタ設定を読み込み
+    loadMasterConfig() {
+        const saved = localStorage.getItem('masterConfig');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+
+        // デフォルト設定
+        return {
+            monsterFields: [
+                { id: 'name', label: '名前', type: 'text', required: true, system: true },
+                { id: 'danger', label: '危険度', type: 'select', required: true, system: true },
+                { id: 'rarity', label: 'レア度', type: 'select', required: true, system: true }
+            ],
+            itemFields: [
+                { id: 'name', label: '名前', type: 'text', required: true, system: true },
+                { id: 'type', label: '種類', type: 'select', required: true, system: true },
+                { id: 'rarity', label: 'レアリティ', type: 'select', required: true, system: true }
+            ],
+            characterJobs: ['戦士', '魔法使い', '僧侶', '盗賊', '騎士', '弓使い', '召喚士'],
+            characterRaces: ['人間', 'エルフ', 'ドワーフ', '獣人', 'ドラゴニュート', '天使', '悪魔'],
+            characterElements: ['無', '火', '水', '風', '土', '光', '闇', '雷', '氷'],
+            characterStats: [
+                { id: 'hp', label: 'HP', defaultValue: 100, system: true },
+                { id: 'mp', label: 'MP', defaultValue: 50, system: true },
+                { id: 'attack', label: '攻撃力', defaultValue: 10, system: true },
+                { id: 'defense', label: '防御力', defaultValue: 10, system: true },
+                { id: 'speed', label: '素早さ', defaultValue: 10, system: true },
+                { id: 'luck', label: '運', defaultValue: 10, system: true }
+            ],
+            workGenres: ['ファンタジー', 'SF', 'ミステリー', 'ホラー', '恋愛', '冒険', '歴史', '現代', 'その他'],
+            timeOfDay: ['早朝', '朝', '午前', '昼', '午後', '夕方', '夜', '深夜', '不明'],
+            monsterRarities: ['☆', '★', '★★', '★★★', '★★★★', '★★★★★', '★★★★★★'],
+            itemRarities: ['コモン', 'アンコモン', 'レア', 'エピック', 'レジェンド', 'ミシック', 'イモータル', 'レガリア', 'ディヴァイン'],
+            dangerLevels: ['極低', '低', '中', '高', '極高'],
+            itemTypes: ['消耗品', '素材', '装備', 'カード', 'その他']
+        };
+    }
+
+    // マスタ設定を保存
+    saveMasterConfig() {
+        localStorage.setItem('masterConfig', JSON.stringify(this.masterConfig));
+        this.updateAllSelects();
+    }
+
+    // モンスター項目を追加
+    addMonsterField(label, type) {
+        const id = 'custom_' + Date.now();
+        this.masterConfig.monsterFields.push({
+            id,
+            label,
+            type,
+            required: false,
+            system: false
+        });
+        this.saveMasterConfig();
+        return id;
+    }
+
+    // アイテム項目を追加
+    addItemField(label, type) {
+        const id = 'custom_' + Date.now();
+        this.masterConfig.itemFields.push({
+            id,
+            label,
+            type,
+            required: false,
+            system: false
+        });
+        this.saveMasterConfig();
+        return id;
+    }
+
+    // 項目を削除
+    removeMonsterField(id) {
+        const field = this.masterConfig.monsterFields.find(f => f.id === id);
+        if (field && field.system) {
+            alert('システム項目は削除できません');
+            return false;
+        }
+        this.masterConfig.monsterFields = this.masterConfig.monsterFields.filter(f => f.id !== id);
+        this.saveMasterConfig();
+        return true;
+    }
+
+    removeItemField(id) {
+        const field = this.masterConfig.itemFields.find(f => f.id === id);
+        if (field && field.system) {
+            alert('システム項目は削除できません');
+            return false;
+        }
+        this.masterConfig.itemFields = this.masterConfig.itemFields.filter(f => f.id !== id);
+        this.saveMasterConfig();
+        return true;
+    }
+
+    // レアリティ管理
+    addMonsterRarity(value) {
+        if (!this.masterConfig.monsterRarities.includes(value)) {
+            this.masterConfig.monsterRarities.push(value);
+            this.saveMasterConfig();
+            return true;
+        }
+        return false;
+    }
+
+    removeMonsterRarity(value) {
+        this.masterConfig.monsterRarities = this.masterConfig.monsterRarities.filter(r => r !== value);
+        this.saveMasterConfig();
+    }
+
+    addItemRarity(value) {
+        if (!this.masterConfig.itemRarities.includes(value)) {
+            this.masterConfig.itemRarities.push(value);
+            this.saveMasterConfig();
+            return true;
+        }
+        return false;
+    }
+
+    removeItemRarity(value) {
+        this.masterConfig.itemRarities = this.masterConfig.itemRarities.filter(r => r !== value);
+        this.saveMasterConfig();
+    }
+
+    // 危険度管理
+    addDangerLevel(value) {
+        if (!this.masterConfig.dangerLevels.includes(value)) {
+            this.masterConfig.dangerLevels.push(value);
+            this.saveMasterConfig();
+            return true;
+        }
+        return false;
+    }
+
+    removeDangerLevel(value) {
+        this.masterConfig.dangerLevels = this.masterConfig.dangerLevels.filter(d => d !== value);
+        this.saveMasterConfig();
+    }
+
+    // アイテム種類管理
+    addItemType(value) {
+        if (!this.masterConfig.itemTypes.includes(value)) {
+            this.masterConfig.itemTypes.push(value);
+            this.saveMasterConfig();
+            return true;
+        }
+        return false;
+    }
+
+    removeItemType(value) {
+        this.masterConfig.itemTypes = this.masterConfig.itemTypes.filter(t => t !== value);
+        this.saveMasterConfig();
+    }
+
+    // キャラクター職業管理
+    addCharacterJob(value) {
+        if (!this.masterConfig.characterJobs) this.masterConfig.characterJobs = [];
+        if (!this.masterConfig.characterJobs.includes(value)) {
+            this.masterConfig.characterJobs.push(value);
+            this.saveMasterConfig();
+            return true;
+        }
+        return false;
+    }
+
+    removeCharacterJob(value) {
+        if (!this.masterConfig.characterJobs) return;
+        this.masterConfig.characterJobs = this.masterConfig.characterJobs.filter(j => j !== value);
+        this.saveMasterConfig();
+    }
+
+    // キャラクター種族管理
+    addCharacterRace(value) {
+        if (!this.masterConfig.characterRaces) this.masterConfig.characterRaces = [];
+        if (!this.masterConfig.characterRaces.includes(value)) {
+            this.masterConfig.characterRaces.push(value);
+            this.saveMasterConfig();
+            return true;
+        }
+        return false;
+    }
+
+    removeCharacterRace(value) {
+        if (!this.masterConfig.characterRaces) return;
+        this.masterConfig.characterRaces = this.masterConfig.characterRaces.filter(r => r !== value);
+        this.saveMasterConfig();
+    }
+
+    // キャラクター属性管理
+    addCharacterElement(value) {
+        if (!this.masterConfig.characterElements) this.masterConfig.characterElements = [];
+        if (!this.masterConfig.characterElements.includes(value)) {
+            this.masterConfig.characterElements.push(value);
+            this.saveMasterConfig();
+            return true;
+        }
+        return false;
+    }
+
+    removeCharacterElement(value) {
+        if (!this.masterConfig.characterElements) return;
+        this.masterConfig.characterElements = this.masterConfig.characterElements.filter(e => e !== value);
+        this.saveMasterConfig();
+    }
+
+    // キャラクターステータス項目管理
+    addCharacterStat(label, defaultValue = 10) {
+        if (!this.masterConfig.characterStats) this.masterConfig.characterStats = [];
+        const id = 'custom_stat_' + Date.now();
+        this.masterConfig.characterStats.push({
+            id,
+            label,
+            defaultValue: parseInt(defaultValue),
+            system: false
+        });
+        this.saveMasterConfig();
+        return id;
+    }
+
+    removeCharacterStat(id) {
+        if (!this.masterConfig.characterStats) return false;
+        const stat = this.masterConfig.characterStats.find(s => s.id === id);
+        if (stat && stat.system) {
+            alert('システムステータスは削除できません');
+            return false;
+        }
+        this.masterConfig.characterStats = this.masterConfig.characterStats.filter(s => s.id !== id);
+        this.saveMasterConfig();
+        return true;
+    }
+
+    updateCharacterStat(id, label, defaultValue) {
+        if (!this.masterConfig.characterStats) return false;
+        const stat = this.masterConfig.characterStats.find(s => s.id === id);
+        if (stat) {
+            stat.label = label;
+            stat.defaultValue = parseInt(defaultValue);
+            this.saveMasterConfig();
+            return true;
+        }
+        return false;
+    }
+
+    // すべてのセレクトボックスを更新
+    updateAllSelects() {
+        // 危険度セレクト更新
+        const dangerSelects = document.querySelectorAll('select[data-field="danger"]');
+        dangerSelects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = this.masterConfig.dangerLevels.map(d => 
+                `<option value="${d}">${d}</option>`
+            ).join('');
+            if (currentValue) select.value = currentValue;
+        });
+
+        // モンスターレアリティセレクト更新
+        const monsterRaritySelects = document.querySelectorAll('select[data-field="monsterRarity"]');
+        monsterRaritySelects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = this.masterConfig.monsterRarities.map(r => 
+                `<option value="${r}">${r}</option>`
+            ).join('');
+            if (currentValue) select.value = currentValue;
+        });
+
+        // アイテムレアリティセレクト更新
+        const itemRaritySelects = document.querySelectorAll('select[data-field="itemRarity"]');
+        itemRaritySelects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = this.masterConfig.itemRarities.map(r => 
+                `<option value="${r}">${r}</option>`
+            ).join('');
+            if (currentValue) select.value = currentValue;
+        });
+
+        // アイテム種類セレクト更新
+        const itemTypeSelects = document.querySelectorAll('select[data-field="itemType"]');
+        itemTypeSelects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = this.masterConfig.itemTypes.map(t => 
+                `<option value="${t}">${t}</option>`
+            ).join('');
+            if (currentValue) select.value = currentValue;
+        });
+    }
+}
+
+// マスタ管理UI
+class MasterUI {
+    constructor(masterManager) {
+        this.masterManager = masterManager;
+        this.initializeEventListeners();
+        this.render();
+    }
+
+    initializeEventListeners() {
+        // モンスター項目追加
+        document.getElementById('addMonsterFieldBtn')?.addEventListener('click', () => {
+            this.showAddFieldModal('monster');
+        });
+
+        // アイテム項目追加
+        document.getElementById('addItemFieldBtn')?.addEventListener('click', () => {
+            this.showAddFieldModal('item');
+        });
+
+        // レアリティ追加
+        document.getElementById('addMonsterRarityBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('monsterRarity', 'モンスターレアリティ');
+        });
+
+        document.getElementById('addItemRarityBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('itemRarity', 'アイテムレアリティ');
+        });
+
+        // 危険度追加
+        document.getElementById('addDangerLevelBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('dangerLevel', '危険度');
+        });
+
+        // アイテム種類追加
+        document.getElementById('addItemTypeBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('itemType', 'アイテム種類');
+        });
+
+        // キャラクター職業追加
+        document.getElementById('addCharacterJobBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('characterJob', '職業');
+        });
+
+        // キャラクター種族追加
+        document.getElementById('addCharacterRaceBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('characterRace', '種族');
+        });
+
+        // キャラクター属性追加
+        document.getElementById('addCharacterElementBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('characterElement', '属性');
+        });
+
+        // キャラクターステータス項目追加
+        document.getElementById('addCharacterStatBtn')?.addEventListener('click', () => {
+            this.showAddStatModal();
+        });
+    }
+
+    render() {
+        this.renderMonsterFields();
+        this.renderItemFields();
+        this.renderMonsterRarities();
+        this.renderItemRarities();
+        this.renderDangerLevels();
+        this.renderItemTypes();
+        this.renderCharacterJobs();
+        this.renderCharacterRaces();
+        this.renderCharacterElements();
+        this.renderCharacterStats();
+        
+        // ドラッグ&ドロップイベントを設定
+        this.setupDragAndDrop();
+    }
+
+    setupDragAndDrop() {
+        // モンスター項目
+        this.setupDragForContainer('monsterFieldsList', 'monsterFields');
+        // アイテム項目
+        this.setupDragForContainer('itemFieldsList', 'itemFields');
+        // モンスターレアリティ
+        this.setupDragForContainer('monsterRarityList', 'monsterRarities');
+        // アイテムレアリティ
+        this.setupDragForContainer('itemRarityList', 'itemRarities');
+        // 危険度
+        this.setupDragForContainer('dangerLevelList', 'dangerLevels');
+        // アイテム種類
+        this.setupDragForContainer('itemTypeList', 'itemTypes');
+    }
+
+    setupDragForContainer(containerId, configKey) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const items = container.querySelectorAll('.master-field-item, .rarity-item, .danger-item, .item-type-item');
+        
+        items.forEach((item, index) => {
+            item.setAttribute('draggable', 'true');
+            item.style.cursor = 'move';
+            
+            item.addEventListener('dragstart', (e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', index.toString());
+                e.dataTransfer.setData('configKey', configKey);
+                item.classList.add('dragging');
+            });
+
+            item.addEventListener('dragend', (e) => {
+                item.classList.remove('dragging');
+            });
+
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                const afterElement = this.getDragAfterElement(container, e.clientY);
+                const dragging = container.querySelector('.dragging');
+                
+                if (afterElement == null) {
+                    container.appendChild(dragging);
+                } else {
+                    container.insertBefore(dragging, afterElement);
+                }
+            });
+
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                const fromConfigKey = e.dataTransfer.getData('configKey');
+                
+                if (fromConfigKey !== configKey) return;
+                
+                const items = Array.from(container.querySelectorAll('.master-field-item, .rarity-item, .danger-item, .item-type-item'));
+                const toIndex = items.indexOf(item);
+                
+                this.reorderItems(configKey, fromIndex, toIndex);
+            });
+        });
+    }
+
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.master-field-item:not(.dragging), .rarity-item:not(.dragging), .danger-item:not(.dragging), .item-type-item:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    reorderItems(configKey, fromIndex, toIndex) {
+        if (fromIndex === toIndex) return;
+        
+        const config = this.masterManager.masterConfig[configKey];
+        const item = config.splice(fromIndex, 1)[0];
+        config.splice(toIndex, 0, item);
+        
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+
+    renderMonsterFields() {
+        const container = document.getElementById('monsterFieldsList');
+        if (!container) return;
+
+        const fields = this.masterManager.masterConfig.monsterFields;
+        if (fields.length === 0) {
+            container.innerHTML = '<p class="master-empty">項目がありません</p>';
+            return;
+        }
+
+        container.innerHTML = fields.map(field => `
+            <div class="master-field-item" data-field-id="${field.id}">
+                <div class="field-info">
+                    <span class="field-label">${field.label}</span>
+                    <span class="field-type">${this.getTypeLabel(field.type)}</span>
+                    ${field.required ? '<span class="field-type" style="background: var(--danger-color);">必須</span>' : ''}
+                    ${field.system ? '<span class="field-type" style="background: var(--secondary-color);">システム</span>' : ''}
+                </div>
+                <div class="field-actions">
+                    ${!field.system ? `<button class="btn btn-danger btn-sm" onclick="masterUI.removeMonsterField('${field.id}')">削除</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderItemFields() {
+        const container = document.getElementById('itemFieldsList');
+        if (!container) return;
+
+        const fields = this.masterManager.masterConfig.itemFields;
+        if (fields.length === 0) {
+            container.innerHTML = '<p class="master-empty">項目がありません</p>';
+            return;
+        }
+
+        container.innerHTML = fields.map(field => `
+            <div class="master-field-item" data-field-id="${field.id}">
+                <div class="field-info">
+                    <span class="field-label">${field.label}</span>
+                    <span class="field-type">${this.getTypeLabel(field.type)}</span>
+                    ${field.required ? '<span class="field-type" style="background: var(--danger-color);">必須</span>' : ''}
+                    ${field.system ? '<span class="field-type" style="background: var(--secondary-color);">システム</span>' : ''}
+                </div>
+                <div class="field-actions">
+                    ${!field.system ? `<button class="btn btn-danger btn-sm" onclick="masterUI.removeItemField('${field.id}')">削除</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderMonsterRarities() {
+        const container = document.getElementById('monsterRarityList');
+        if (!container) return;
+
+        const rarities = this.masterManager.masterConfig.monsterRarities;
+        container.innerHTML = rarities.map(rarity => `
+            <div class="rarity-item">
+                <div class="field-info">
+                    <span class="field-value">${rarity}</span>
+                </div>
+                <div class="field-actions">
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeMonsterRarity('${rarity}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderItemRarities() {
+        const container = document.getElementById('itemRarityList');
+        if (!container) return;
+
+        const rarities = this.masterManager.masterConfig.itemRarities;
+        container.innerHTML = rarities.map(rarity => `
+            <div class="rarity-item">
+                <div class="field-info">
+                    <span class="field-value">${rarity}</span>
+                </div>
+                <div class="field-actions">
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeItemRarity('${rarity}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderDangerLevels() {
+        const container = document.getElementById('dangerLevelList');
+        if (!container) return;
+
+        const levels = this.masterManager.masterConfig.dangerLevels;
+        container.innerHTML = levels.map(level => `
+            <div class="danger-item">
+                <div class="field-info">
+                    <span class="field-value">${level}</span>
+                </div>
+                <div class="field-actions">
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeDangerLevel('${level}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderItemTypes() {
+        const container = document.getElementById('itemTypeList');
+        if (!container) return;
+
+        const types = this.masterManager.masterConfig.itemTypes;
+        container.innerHTML = types.map(type => `
+            <div class="item-type-item">
+                <div class="field-info">
+                    <span class="field-value">${type}</span>
+                </div>
+                <div class="field-actions">
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeItemType('${type}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    getTypeLabel(type) {
+        const labels = {
+            text: 'テキスト',
+            number: '数値',
+            select: '選択',
+            textarea: '長文'
+        };
+        return labels[type] || type;
+    }
+
+    showAddFieldModal(targetType) {
+        const label = prompt(`${targetType === 'monster' ? 'モンスター' : 'アイテム'}の項目名を入力してください:`);
+        if (!label) return;
+
+        const type = prompt('項目タイプを選択してください:\n1: テキスト\n2: 数値\n3: 選択\n4: 長文', '1');
+        const typeMap = { '1': 'text', '2': 'number', '3': 'select', '4': 'textarea' };
+        const fieldType = typeMap[type] || 'text';
+
+        if (targetType === 'monster') {
+            this.masterManager.addMonsterField(label, fieldType);
+        } else {
+            this.masterManager.addItemField(label, fieldType);
+        }
+
+        this.render();
+    }
+
+    showAddValueModal(type, label) {
+        const value = prompt(`${label}を入力してください:`);
+        if (!value) return;
+
+        let success = false;
+        switch (type) {
+            case 'monsterRarity':
+                success = this.masterManager.addMonsterRarity(value);
+                break;
+            case 'itemRarity':
+                success = this.masterManager.addItemRarity(value);
+                break;
+            case 'dangerLevel':
+                success = this.masterManager.addDangerLevel(value);
+                break;
+            case 'itemType':
+                success = this.masterManager.addItemType(value);
+                break;
+            case 'characterJob':
+                success = this.masterManager.addCharacterJob(value);
+                break;
+            case 'characterRace':
+                success = this.masterManager.addCharacterRace(value);
+                break;
+            case 'characterElement':
+                success = this.masterManager.addCharacterElement(value);
+                break;
+        }
+
+        if (!success) {
+            alert('既に存在します');
+        }
+
+        this.render();
+    }
+
+    showAddStatModal() {
+        const label = prompt('ステータス項目名を入力してください（例: 魔力、器用さ）:');
+        if (!label) return;
+
+        const defaultValue = prompt('初期値を入力してください:', '10');
+        if (defaultValue === null) return;
+
+        this.masterManager.addCharacterStat(label, defaultValue);
+        this.render();
+    }
+
+    removeMonsterField(id) {
+        if (confirm('この項目を削除しますか？')) {
+            this.masterManager.removeMonsterField(id);
+            this.render();
+        }
+    }
+
+    removeItemField(id) {
+        if (confirm('この項目を削除しますか？')) {
+            this.masterManager.removeItemField(id);
+            this.render();
+        }
+    }
+
+    removeMonsterRarity(value) {
+        if (confirm(`「${value}」を削除しますか？`)) {
+            this.masterManager.removeMonsterRarity(value);
+            this.render();
+        }
+    }
+
+    removeItemRarity(value) {
+        if (confirm(`「${value}」を削除しますか？`)) {
+            this.masterManager.removeItemRarity(value);
+            this.render();
+        }
+    }
+
+    removeDangerLevel(value) {
+        if (confirm(`「${value}」を削除しますか？`)) {
+            this.masterManager.removeDangerLevel(value);
+            this.render();
+        }
+    }
+
+    removeItemType(value) {
+        if (confirm(`「${value}」を削除しますか？`)) {
+            this.masterManager.removeItemType(value);
+            this.render();
+        }
+    }
+
+    // キャラクター関連レンダリング
+    renderCharacterJobs() {
+        const container = document.getElementById('characterJobList');
+        if (!container) return;
+
+        const jobs = this.masterManager.masterConfig.characterJobs || [];
+        container.innerHTML = jobs.map(job => `
+            <div class="character-job-item">
+                <div class="field-info">
+                    <span class="field-value">${job}</span>
+                </div>
+                <div class="field-actions">
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeCharacterJob('${job}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderCharacterRaces() {
+        const container = document.getElementById('characterRaceList');
+        if (!container) return;
+
+        const races = this.masterManager.masterConfig.characterRaces || [];
+        container.innerHTML = races.map(race => `
+            <div class="character-race-item">
+                <div class="field-info">
+                    <span class="field-value">${race}</span>
+                </div>
+                <div class="field-actions">
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeCharacterRace('${race}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderCharacterElements() {
+        const container = document.getElementById('characterElementList');
+        if (!container) return;
+
+        const elements = this.masterManager.masterConfig.characterElements || [];
+        container.innerHTML = elements.map(element => `
+            <div class="character-element-item">
+                <div class="field-info">
+                    <span class="field-value">${element}</span>
+                </div>
+                <div class="field-actions">
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeCharacterElement('${element}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderCharacterStats() {
+        const container = document.getElementById('characterStatsList');
+        if (!container) return;
+
+        const stats = this.masterManager.masterConfig.characterStats || [];
+        container.innerHTML = stats.map(stat => `
+            <div class="character-stat-item" ${!stat.system ? 'draggable="true"' : ''}>
+                <div class="field-info">
+                    <span class="field-label">${stat.label}</span>
+                    <span class="field-detail">初期値: ${stat.defaultValue}</span>
+                    ${stat.system ? '<span class="system-badge">システム</span>' : ''}
+                </div>
+                <div class="field-actions">
+                    ${!stat.system ? `
+                        <button class="btn btn-secondary btn-sm" onclick="masterUI.editCharacterStat('${stat.id}', '${stat.label}', ${stat.defaultValue})">編集</button>
+                        <button class="btn btn-danger btn-sm" onclick="masterUI.removeCharacterStat('${stat.id}')">削除</button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // キャラクター関連削除
+    removeCharacterJob(value) {
+        if (confirm(`職業「${value}」を削除しますか？`)) {
+            this.masterManager.removeCharacterJob(value);
+            this.render();
+        }
+    }
+
+    removeCharacterRace(value) {
+        if (confirm(`種族「${value}」を削除しますか？`)) {
+            this.masterManager.removeCharacterRace(value);
+            this.render();
+        }
+    }
+
+    removeCharacterElement(value) {
+        if (confirm(`属性「${value}」を削除しますか？`)) {
+            this.masterManager.removeCharacterElement(value);
+            this.render();
+        }
+    }
+
+    removeCharacterStat(id) {
+        if (confirm('このステータス項目を削除しますか？')) {
+            if (this.masterManager.removeCharacterStat(id)) {
+                this.render();
+            }
+        }
+    }
+
+    editCharacterStat(id, currentLabel, currentValue) {
+        const label = prompt('ステータス項目名:', currentLabel);
+        if (!label) return;
+
+        const defaultValue = prompt('初期値:', currentValue.toString());
+        if (defaultValue === null) return;
+
+        this.masterManager.updateCharacterStat(id, label, defaultValue);
+        this.render();
+    }
+}
+
+// グローバル変数
+let masterManager;
+let masterUI;
