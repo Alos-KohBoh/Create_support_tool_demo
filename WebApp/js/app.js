@@ -669,6 +669,11 @@ class App {
                     targetContent.style.display = 'block';
                 }
 
+                // 世界観タブがクリックされた時に世界観設定を読み込む
+                if (tabName === 'worldmap-content') {
+                    this.loadWorldSetting();
+                }
+
                 // シミュレーションセクションの場合の特別処理
                 if (section.id === 'simulation-section') {
                     const resultsSection = document.getElementById('resultsSection');
