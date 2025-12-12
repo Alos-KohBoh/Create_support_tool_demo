@@ -623,5 +623,56 @@ class UIManager {
             });
         });
     }
-}
 
+    // 通知を表示
+    showNotification(message, type = 'info') {
+        // 既存の通知を削除
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        // 通知要素を作成
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+
+        // スタイル設定
+        Object.assign(notification.style, {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '12px 20px',
+            borderRadius: '4px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: '10000',
+            fontSize: '14px',
+            fontWeight: '500',
+            maxWidth: '400px',
+            animation: 'slideInRight 0.3s ease-out'
+        });
+
+        // タイプ別の色設定
+        const colors = {
+            success: { bg: '#10b981', text: '#ffffff' },
+            error: { bg: '#ef4444', text: '#ffffff' },
+            warning: { bg: '#f59e0b', text: '#ffffff' },
+            info: { bg: '#3b82f6', text: '#ffffff' }
+        };
+
+        const color = colors[type] || colors.info;
+        notification.style.backgroundColor = color.bg;
+        notification.style.color = color.text;
+
+        // DOMに追加
+        document.body.appendChild(notification);
+
+        // 3秒後に自動削除
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
+}

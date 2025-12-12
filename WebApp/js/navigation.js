@@ -43,13 +43,20 @@ class NavigationManager {
         document.getElementById('data-section').style.display = sectionId === 'data-section' ? 'block' : 'none';
         document.getElementById('plot-section').style.display = sectionId === 'plot-section' ? 'block' : 'none';
 
-        // セクション内のタブをリセット
+        // セクション内のタブをリセットとデータ読み込み
         if (sectionId === 'simulation-section') {
             this.activateTab('simulation');
         } else if (sectionId === 'data-section') {
             this.activateTab('characters');
+            // データ一覧を初期表示
+            if (window.app) {
+                window.app.refreshDataLists();
+            }
         } else if (sectionId === 'plot-section') {
-            this.activateTab('chapters');
+            // 作品一覧を表示
+            if (window.app) {
+                window.app.renderWorkList();
+            }
         }
     }
 

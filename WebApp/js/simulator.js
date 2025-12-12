@@ -6,10 +6,21 @@ class DropSimulator {
         this.expectedValues = {};
     }
 
+    // レベルマルチプライヤー計算
+    // レベル1: 100% (1.0倍), レベル10以上: 300% (3.0倍) ※上限
+    calculateLevelMultiplier(level) {
+        if (level < 1) level = 1;
+        if (level >= 10) return 3.0;
+        // レベル1から10まで線形に1.0倍から3.0倍へ増加
+        return 1.0 + (level - 1) * (2.0 / 9);
+    }
+
     // ガチャシミュレーション実行
-    runSimulation(monster, trialCount) {
+    runSimulation(monster, trialCount, level = 1) {
         this.dropResults = [];
         this.itemCounts = {};
+        
+        const levelMultiplier = this.calculateLevelMultiplier(level);
 
         // 各アイテムのカウントを初期化
         monster.dropItems.forEach(item => {
@@ -18,7 +29,7 @@ class DropSimulator {
 
         // シミュレーション実行
         for (let i = 1; i <= trialCount; i++) {
-            const droppedItems = this.simulateSingleDrop(monster);
+            const droppedItems = this.simulateSingleDrop(monster, levelMultiplier);
             
             // 各ドロップアイテムを記録
             if (droppedItems.length === 0) {
@@ -42,12 +53,12 @@ class DropSimulator {
 
     // 単一ドロップのシミュレーション
     // 各アイテムを独立して判定し、複数ドロップや無ドロップに対応
-    simulateSingleDrop(monster) {
+    simulateSingleDrop(monster, levelMultiplier = 1.0) {
         const droppedItems = [];
 
         // 各アイテムごとに独立して判定
         for (const dropItem of monster.dropItems) {
-            let probability = dropItem.probability;
+            let probability = dropItem.probability * levelMultiplier;
             
             // 確率が100%を超える場合、複数個ドロップの可能性
             while (probability > 0) {
@@ -69,11 +80,13 @@ class DropSimulator {
     }
 
     // 期待値計算
-    calculateExpectedValues(monster, trialCount) {
+    calculateExpectedValues(monster, trialCount, level = 1) {
         this.expectedValues = {};
+        
+        const levelMultiplier = this.calculateLevelMultiplier(level);
 
         monster.dropItems.forEach(dropItem => {
-            this.expectedValues[dropItem.itemName] = dropItem.probability * trialCount;
+            this.expectedValues[dropItem.itemName] = dropItem.probability * levelMultiplier * trialCount;
         });
 
         return this.expectedValues;

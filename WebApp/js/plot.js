@@ -126,6 +126,11 @@ class PlotManager {
         return this.scenes.filter(s => s.chapterId === chapterId).sort((a, b) => a.order - b.order);
     }
 
+    // エイリアス: getScenesByChapterId
+    getScenesByChapterId(chapterId) {
+        return this.getScenesByChapter(chapterId);
+    }
+
     // 作品IDでシーンを取得
     getScenesByWorkId(workId) {
         return this.scenes.filter(s => s.workId === workId).sort((a, b) => {
@@ -187,6 +192,13 @@ class PlotManager {
 
     getAllTimelineEvents() {
         return this.timelineEvents.sort((a, b) => {
+            return new Date(a.timestamp) - new Date(b.timestamp);
+        });
+    }
+
+    // 作品IDでタイムラインイベントを取得
+    getTimelineEventsByWorkId(workId) {
+        return this.timelineEvents.filter(e => e.workId === workId).sort((a, b) => {
             return new Date(a.timestamp) - new Date(b.timestamp);
         });
     }

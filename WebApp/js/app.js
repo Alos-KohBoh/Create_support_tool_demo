@@ -26,6 +26,7 @@ class App {
 
     init() {
         this.setupEventListeners();
+        this.setupImageUploadListeners();
         this.loadMonsterSelect();
         this.setupTabs();
         this.setupSubTabs();
@@ -269,6 +270,168 @@ class App {
         document.getElementById('addDropItem').addEventListener('click', () => {
             this.addDropItemRow();
         });
+    }
+
+    // 画像アップロード機能の設定
+    setupImageUploadListeners() {
+        // キャラクター画像選択ボタン
+        const charImageBtn = document.getElementById('char-image-select-btn');
+        if (charImageBtn) {
+            charImageBtn.addEventListener('click', () => {
+                this.currentImageInputId = 'characterImage';
+                this.uiManager.showModal('imageSelectModal');
+            });
+        }
+
+        // シーン画像選択ボタン
+        const sceneImageBtn = document.getElementById('scene-image-select-btn');
+        if (sceneImageBtn) {
+            sceneImageBtn.addEventListener('click', () => {
+                this.currentImageInputId = 'sceneImage';
+                this.uiManager.showModal('imageSelectModal');
+            });
+        }
+
+        // タイムラインイベント画像選択ボタン
+        const timelineImageBtn = document.getElementById('timeline-image-select-btn');
+        if (timelineImageBtn) {
+            timelineImageBtn.addEventListener('click', () => {
+                this.currentImageInputId = 'timelineEventImage';
+                this.uiManager.showModal('imageSelectModal');
+            });
+        }
+
+        // 画像アップロードタブ切り替え
+        document.querySelectorAll('.image-upload-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = e.target.dataset.tab;
+                
+                // タブボタンのアクティブ化
+                document.querySelectorAll('.image-upload-tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // タブコンテンツの表示切替
+                document.querySelectorAll('.image-upload-tab').forEach(t => t.classList.remove('active'));
+                document.getElementById(`${tab}-tab`).classList.add('active');
+            });
+        });
+
+        // URL指定
+        const confirmImageUrlBtn = document.getElementById('confirmImageUrl');
+        if (confirmImageUrlBtn) {
+            confirmImageUrlBtn.addEventListener('click', () => {
+                const url = document.getElementById('imageUrlInput').value.trim();
+                if (url && this.currentImageInputId) {
+                    document.getElementById(this.currentImageInputId).value = url;
+                    this.uiManager.hideModal('imageSelectModal');
+                    document.getElementById('imageUrlInput').value = '';
+                }
+            });
+        }
+
+        // ファイルアップロード
+        const imageFileInput = document.getElementById('imageFileInput');
+        if (imageFileInput) {
+            imageFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && this.currentImageInputId) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64 = event.target.result;
+                        document.getElementById(this.currentImageInputId).value = base64;
+                        this.uiManager.hideModal('imageSelectModal');
+                        e.target.value = '';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // メディアライブラリから選択
+        const selectFromLibraryBtn = document.getElementById('selectFromLibrary');
+        if (selectFromLibraryBtn) {
+            selectFromLibraryBtn.addEventListener('click', () => {
+                this.showMediaLibrary();
+            });
+        }
+
+        // メディアライブラリに追加
+        const addToLibraryBtn = document.getElementById('addToLibrary');
+        if (addToLibraryBtn) {
+            addToLibraryBtn.addEventListener('click', () => {
+                const file = document.getElementById('libraryImageFile').files[0];
+                const name = document.getElementById('libraryImageName').value.trim();
+                
+                if (!file) {
+                    alert('画像ファイルを選択してください');
+                    return;
+                }
+                
+                if (!name) {
+                    alert('画像名を入力してください');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const base64 = event.target.result;
+                    this.mediaLibrary.addImage(name, base64);
+                    this.showMediaLibrary();
+                    document.getElementById('libraryImageFile').value = '';
+                    document.getElementById('libraryImageName').value = '';
+                    alert('メディアライブラリに追加しました');
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+    }
+
+    // メディアライブラリ表示
+    showMediaLibrary() {
+        const container = document.getElementById('mediaLibraryGrid');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        const images = this.mediaLibrary.getAllImages();
+        
+        if (images.length === 0) {
+            container.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">画像がありません</p>';
+            return;
+        }
+        
+        images.forEach(img => {
+            const item = document.createElement('div');
+            item.className = 'media-item';
+            item.innerHTML = `
+                <img src="${img.data}" alt="${img.name}">
+                <div class="media-item-name">${img.name}</div>
+                <div class="media-item-actions">
+                    <button onclick="app.selectMediaImage('${img.id}')" class="btn-primary btn-sm">選択</button>
+                    <button onclick="app.deleteMediaImage('${img.id}')" class="btn-danger btn-sm">削除</button>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    // メディアライブラリから画像を選択
+    selectMediaImage(imageId) {
+        if (this.currentImageInputId) {
+            const image = this.mediaLibrary.getImage(imageId);
+            if (image) {
+                document.getElementById(this.currentImageInputId).value = image.data;
+                this.uiManager.hideModal('imageSelectModal');
+            }
+        }
+    }
+
+    // メディアライブラリから画像を削除
+    deleteMediaImage(imageId) {
+        if (confirm('この画像を削除しますか？')) {
+            this.mediaLibrary.deleteImage(imageId);
+            this.showMediaLibrary();
+        }
     }
 
     // タブ機能の設定
@@ -518,6 +681,7 @@ class App {
         if (!this.selectedMonster) return;
 
         const trialCount = parseInt(document.getElementById('trialCount').value);
+        const monsterLevel = parseInt(document.getElementById('monsterLevel').value) || 1;
         
         if (trialCount <= 0 || trialCount > 100000) {
             alert('試行回数は1〜100000の範囲で入力してください');
@@ -525,7 +689,7 @@ class App {
         }
 
         // シミュレーション実行
-        const { results, counts } = this.simulator.runSimulation(this.selectedMonster, trialCount);
+        const { results, counts } = this.simulator.runSimulation(this.selectedMonster, trialCount, monsterLevel);
         const stats = this.simulator.getStatistics(trialCount);
 
         // 結果を保持し、追加済みアイテムをリセット
@@ -558,7 +722,8 @@ class App {
         if (!this.selectedMonster) return;
 
         const trialCount = parseInt(document.getElementById('trialCount').value);
-        const expectedValues = this.simulator.calculateExpectedValues(this.selectedMonster, trialCount);
+        const monsterLevel = parseInt(document.getElementById('monsterLevel').value) || 1;
+        const expectedValues = this.simulator.calculateExpectedValues(this.selectedMonster, trialCount, monsterLevel);
         
         this.uiManager.displayExpectedValues(expectedValues, trialCount);
     }
@@ -1277,7 +1442,7 @@ class App {
         document.getElementById('characterBackground').value = '';
         document.getElementById('characterDialogues').value = '';
         document.getElementById('characterSkills').value = '';
-        document.getElementById('characterImageUrl').value = '';
+        document.getElementById('characterImage').value = '';
         
         // マスタ設定から選択肢を更新
         this.updateCharacterFormSelects();
@@ -1349,7 +1514,7 @@ class App {
             background: document.getElementById('characterBackground').value.trim(),
             dialogues: dialoguesText ? dialoguesText.split('\n').filter(d => d.trim()) : [],
             skills: skillsText ? skillsText.split('\n').filter(s => s.trim()) : [],
-            imageUrl: document.getElementById('characterImageUrl').value.trim()
+            imageUrl: document.getElementById('characterImage').value.trim()
         };
 
         if (this.editingCharacterId) {
@@ -1434,7 +1599,7 @@ class App {
         document.getElementById('characterBackground').value = character.background;
         document.getElementById('characterDialogues').value = character.dialogues.join('\n');
         document.getElementById('characterSkills').value = character.skills.join('\n');
-        document.getElementById('characterImageUrl').value = character.imageUrl;
+        document.getElementById('characterImage').value = character.imageUrl || '';
 
         // マスタ設定から選択肢を更新
         this.updateCharacterFormSelects();
@@ -1641,6 +1806,7 @@ class App {
         document.getElementById('sceneTimeOfDay').value = '';
         document.getElementById('sceneContent').value = '';
         document.getElementById('sceneNotes').value = '';
+        document.getElementById('sceneImage').value = '';
         
         // マルチセレクトをクリア
         const select = document.getElementById('sceneCharacters');
@@ -1703,6 +1869,7 @@ class App {
             characters: selectedCharacters,
             content: document.getElementById('sceneContent').value.trim(),
             notes: document.getElementById('sceneNotes').value.trim(),
+            imageUrl: document.getElementById('sceneImage').value.trim(),
             workId: currentWork.id
         };
 
@@ -1785,6 +1952,7 @@ class App {
         document.getElementById('sceneTimeOfDay').value = scene.timeOfDay;
         document.getElementById('sceneContent').value = scene.content;
         document.getElementById('sceneNotes').value = scene.notes;
+        document.getElementById('sceneImage').value = scene.imageUrl || '';
 
         // マルチセレクトで選択
         const select = document.getElementById('sceneCharacters');
@@ -1984,6 +2152,7 @@ class App {
         document.getElementById('timelineEventTitle').value = '';
         document.getElementById('timelineEventTimestamp').value = '';
         document.getElementById('timelineEventDescription').value = '';
+        document.getElementById('timelineEventImage').value = '';
         this.updateTimelineEventSelects();
     }
 
@@ -2029,6 +2198,7 @@ class App {
             timeOfDay: document.getElementById('timelineEventTimeOfDay').value,
             timestamp: document.getElementById('timelineEventTimestamp').value.trim(),
             description: document.getElementById('timelineEventDescription').value.trim(),
+            imageUrl: document.getElementById('timelineEventImage').value.trim(),
             workId: currentWork.id,
             relatedScenes: [],
             relatedCharacters: []
@@ -2103,6 +2273,7 @@ class App {
         document.getElementById('timelineEventTimeOfDay').value = event.timeOfDay || '';
         document.getElementById('timelineEventTimestamp').value = event.timestamp || '';
         document.getElementById('timelineEventDescription').value = event.description || '';
+        document.getElementById('timelineEventImage').value = event.imageUrl || '';
 
         this.uiManager.showModal('timelineEventModal');
     }
@@ -2124,6 +2295,122 @@ class App {
         
         this.plotManager.deleteTimelineEvent(id);
         this.renderTimelineView();
+    }
+
+    // プロット出力（テキストコピー）
+    exportPlotToText() {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            alert('作品が選択されていません');
+            return;
+        }
+
+        const text = this.generatePlotText(currentWork);
+        
+        // クリップボードにコピー
+        navigator.clipboard.writeText(text).then(() => {
+            alert('プロットをクリップボードにコピーしました');
+        }).catch(err => {
+            console.error('コピーに失敗しました:', err);
+            alert('コピーに失敗しました');
+        });
+    }
+
+    // プロット出力（ファイルダウンロード）
+    exportPlotToFile() {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            alert('作品が選択されていません');
+            return;
+        }
+
+        const text = this.generatePlotText(currentWork);
+        
+        // ファイルダウンロード
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentWork.title}_プロット.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // プロットテキスト生成
+    generatePlotText(work) {
+        let text = `【作品プロット】\n`;
+        text += `==========================================\n\n`;
+        text += `作品名: ${work.title}\n`;
+        text += `ジャンル: ${work.genre || '未設定'}\n`;
+        text += `テーマ: ${work.theme || '未設定'}\n`;
+        text += `概要: ${work.summary || '未設定'}\n`;
+        text += `\n==========================================\n\n`;
+
+        // キャラクター一覧
+        const characters = this.characterManager.getCharactersByWorkId(work.id);
+        if (characters.length > 0) {
+            text += `【登場人物】\n`;
+            text += `------------------------------------------\n`;
+            characters.forEach(char => {
+                text += `\n■ ${char.name}`;
+                if (char.nameReading) text += ` (${char.nameReading})`;
+                text += `\n`;
+                if (char.age) text += `　年齢: ${char.age}\n`;
+                if (char.gender) text += `　性別: ${char.gender}\n`;
+                if (char.role) text += `　役割: ${char.role}\n`;
+                if (char.personality) text += `　性格: ${char.personality}\n`;
+                if (char.appearance) text += `　外見: ${char.appearance}\n`;
+                if (char.background) text += `　背景: ${char.background}\n`;
+                if (char.notes) text += `　備考: ${char.notes}\n`;
+            });
+            text += `\n==========================================\n\n`;
+        }
+
+        // 章・シーン構成
+        const chapters = this.plotManager.getChaptersByWorkId(work.id);
+        if (chapters.length > 0) {
+            text += `【章・シーン構成】\n`;
+            text += `------------------------------------------\n`;
+            
+            chapters.forEach(chapter => {
+                text += `\n【${chapter.title}】\n`;
+                if (chapter.summary) text += `概要: ${chapter.summary}\n`;
+                
+                const scenes = this.plotManager.getScenesByChapterId(chapter.id);
+                if (scenes.length > 0) {
+                    text += `\n`;
+                    scenes.forEach((scene, index) => {
+                        text += `　${index + 1}. ${scene.title}\n`;
+                        if (scene.location) text += `　　場所: ${scene.location}\n`;
+                        if (scene.characters) text += `　　登場: ${scene.characters}\n`;
+                        if (scene.content) text += `　　内容: ${scene.content}\n`;
+                        if (scene.notes) text += `　　備考: ${scene.notes}\n`;
+                        text += `\n`;
+                    });
+                }
+            });
+            text += `==========================================\n\n`;
+        }
+
+        // タイムラインイベント
+        const events = this.plotManager.getTimelineEventsByWorkId(work.id);
+        if (events.length > 0) {
+            text += `【タイムライン】\n`;
+            text += `------------------------------------------\n`;
+            
+            events.forEach(event => {
+                text += `\n[${event.date || '日時未設定'}] ${event.title}\n`;
+                if (event.description) text += `${event.description}\n`;
+                if (event.characters) text += `関連: ${event.characters}\n`;
+            });
+            text += `\n==========================================\n\n`;
+        }
+
+        text += `出力日時: ${new Date().toLocaleString('ja-JP')}\n`;
+        
+        return text;
     }
 }
 

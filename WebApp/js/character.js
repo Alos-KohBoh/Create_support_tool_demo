@@ -1,7 +1,7 @@
 // キャラクタークラス
 class Character {
     constructor(id, name, job = '', race = '', element = '', level = 1, 
-                stats = {}, personality = '', background = '', dialogues = [], skills = [], imageUrl = '') {
+                stats = {}, personality = '', background = '', dialogues = [], skills = [], imageUrl = '', bagItems = {}) {
         this.id = id;
         this.name = name;
         this.job = job;
@@ -14,6 +14,7 @@ class Character {
         this.dialogues = dialogues; // Array of strings
         this.skills = skills; // Array of strings
         this.imageUrl = imageUrl;
+        this.bagItems = bagItems; // { itemName: quantity } キャラクター専用鞄
     }
 
     // LocalStorageから読み込み用
@@ -26,7 +27,8 @@ class Character {
             c.id, c.name, c.job || '', c.race || '', c.element || '', c.level || 1,
             c.stats || {},
             c.personality || '', c.background || '', c.dialogues || [], c.skills || [],
-            c.imageUrl || ''
+            c.imageUrl || '',
+            c.bagItems || {}
         ));
     }
 
@@ -74,8 +76,23 @@ class CharacterManager {
         return this.characters.find(c => c.id === id);
     }
 
+    // エイリアス: getCharacterByIdとgetCharacterは同じ
+    getCharacterById(id) {
+        return this.getCharacter(id);
+    }
+
     getAllCharacters() {
         return this.characters;
+    }
+
+    // 作品IDでキャラクターを取得
+    getCharactersByWorkId(workId) {
+        return this.characters.filter(c => c.workId === workId);
+    }
+
+    // キャラクターデータを保存
+    saveCharacters() {
+        Character.saveToLocalStorage(this.characters);
     }
 
     getFilteredCharacters(filters) {

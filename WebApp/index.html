@@ -80,6 +80,24 @@
                         </div>
 
                         <div class="form-group">
+                            <label for="simulationCharacterSelect">獲得キャラクター</label>
+                            <select id="simulationCharacterSelect" class="form-control">
+                                <option value="">-- 倉庫（共通） --</option>
+                            </select>
+                            <p class="help-text" style="margin-top: 5px; font-size: 0.85em; color: #666;">
+                                アイテムを獲得するキャラクターを選択（未選択時は倉庫）
+                            </p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="monsterLevel">モンスターレベル</label>
+                            <input type="number" id="monsterLevel" class="form-control" value="1" min="1" max="9999">
+                            <p class="help-text" style="margin-top: 5px; font-size: 0.85em; color: #666;">
+                                レベルが高いほどドロップ確率が上昇（最大300%）
+                            </p>
+                        </div>
+
+                        <div class="form-group">
                             <label for="trialCount">試行回数</label>
                             <input type="number" id="trialCount" class="form-control" value="100" min="1" max="100000">
                         </div>
@@ -101,6 +119,15 @@
                     <!-- 鞄タブ -->
                     <div id="bag" class="main-tab-content">
                     <div class="card">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="bagCharacterSelect">鞄の所有者</label>
+                            <select id="bagCharacterSelect" class="form-control">
+                                <option value="">-- 倉庫（共通） --</option>
+                            </select>
+                        </div>
+                        
+                        <h2 id="bagTitle" style="margin-bottom: 15px;">倉庫</h2>
+                        
                         <div class="bag-capacity">
                             <div class="bag-capacity-info">
                                 <div class="capacity-item">
@@ -121,186 +148,6 @@
 
                         <div id="bagItemsList" class="bag-items-list">
                             <div class="empty-message">鞄は空です</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- データ管理タブ -->
-                <div id="datamanage" class="main-tab-content">
-                    <!-- サブタブ -->
-                    <div class="sub-tabs">
-                        <button class="sub-tab-btn active" data-subtab="monsters">モンスター一覧</button>
-                        <button class="sub-tab-btn" data-subtab="items">アイテム一覧</button>
-                    </div>
-
-                    <!-- モンスター一覧サブタブ -->
-                    <div id="monsters" class="sub-tab-content active">
-                        <div class="card">
-                            <div class="list-header">
-                                <h2>モンスター一覧</h2>
-                                <button id="addMonsterBtn" class="btn btn-success">
-                                    モンスター追加
-                                </button>
-                            </div>
-                            
-                            <!-- フィルター -->
-                            <div class="filter-bar">
-                                <input type="text" id="monsterNameFilter" class="filter-input" placeholder="名前で検索...">
-                                <select id="monsterDangerFilter" class="filter-select">
-                                    <option value="">危険度: すべて</option>
-                                </select>
-                                <select id="monsterRarityFilter" class="filter-select">
-                                    <option value="">レア度: すべて</option>
-                                </select>
-                                <button id="clearMonsterFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
-                            </div>
-
-                            <div id="monsterListView" class="data-list-view">
-                                <!-- モンスター一覧を動的に生成 -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- アイテム一覧サブタブ -->
-                    <div id="items" class="sub-tab-content">
-                        <div class="card">
-                            <div class="list-header">
-                                <h2>アイテム一覧</h2>
-                                <button id="addItemBtn" class="btn btn-success">
-                                    アイテム追加
-                                </button>
-                            </div>
-
-                            <!-- フィルター -->
-                            <div class="filter-bar">
-                                <input type="text" id="itemNameFilter" class="filter-input" placeholder="名前で検索...">
-                                <select id="itemTypeFilter" class="filter-select">
-                                    <option value="">種類: すべて</option>
-                                </select>
-                                <select id="itemRarityFilter" class="filter-select">
-                                    <option value="">レア度: すべて</option>
-                                </select>
-                                <button id="clearItemFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
-                            </div>
-
-                            <div id="itemListView" class="data-list-view">
-                                <!-- アイテム一覧を動的に生成 -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h2>システム</h2>
-                        
-                        <div class="system-section">
-                            <h3>データバックアップ</h3>
-                            <div class="button-group">
-                                <button id="exportDataBtn" class="btn btn-info">
-                                    データをエクスポート
-                                </button>
-                                <button id="importDataBtn" class="btn btn-info">
-                                    データをインポート
-                                </button>
-                            </div>
-                            <input type="file" id="importFileInput" accept=".json" style="display: none;">
-                            <p class="help-text">
-                                エクスポート: すべてのデータをJSONファイルとしてダウンロード<br>
-                                インポート: JSONファイルからデータを復元
-                            </p>
-                        </div>
-
-                        <div class="system-section">
-                            <h3>データリセット</h3>
-                            <div class="button-group">
-                                <button id="resetDataBtn" class="btn btn-danger">
-                                    データリセット
-                                </button>
-                            </div>
-                            <p class="help-text">
-                                すべてのデータを削除してサンプルデータを再読み込みします
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- マスタ管理タブ -->
-                <div id="master" class="main-tab-content">
-                    <div class="card">
-                        <h2>マスタ情報管理</h2>
-                        
-                        <!-- モンスター設定可能項目 -->
-                        <div class="master-section">
-                            <h3>モンスター項目設定</h3>
-                            <div class="master-fields-list" id="monsterFieldsList">
-                                <!-- 動的に生成 -->
-                            </div>
-                            <button id="addMonsterFieldBtn" class="btn btn-info">
-                                モンスター項目を追加
-                            </button>
-                        </div>
-
-                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                        <!-- アイテム設定可能項目 -->
-                        <div class="master-section">
-                            <h3>アイテム項目設定</h3>
-                            <div class="master-fields-list" id="itemFieldsList">
-                                <!-- 動的に生成 -->
-                            </div>
-                            <button id="addItemFieldBtn" class="btn btn-info">
-                                アイテム項目を追加
-                            </button>
-                        </div>
-
-                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                        <!-- レアリティ管理 -->
-                        <div class="master-section">
-                            <h3>レアリティ設定（モンスター）</h3>
-                            <div class="rarity-list" id="monsterRarityList">
-                                <!-- 動的に生成 -->
-                            </div>
-                            <button id="addMonsterRarityBtn" class="btn btn-info">
-                                モンスターレアリティを追加
-                            </button>
-                        </div>
-
-                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                        <div class="master-section">
-                            <h3>レアリティ設定（アイテム）</h3>
-                            <div class="rarity-list" id="itemRarityList">
-                                <!-- 動的に生成 -->
-                            </div>
-                            <button id="addItemRarityBtn" class="btn btn-info">
-                                アイテムレアリティを追加
-                            </button>
-                        </div>
-
-                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                        <!-- 危険度管理 -->
-                        <div class="master-section">
-                            <h3>危険度設定</h3>
-                            <div class="danger-list" id="dangerLevelList">
-                                <!-- 動的に生成 -->
-                            </div>
-                            <button id="addDangerLevelBtn" class="btn btn-info">
-                                危険度を追加
-                            </button>
-                        </div>
-
-                        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
-
-                        <!-- アイテム種類管理 -->
-                        <div class="master-section">
-                            <h3>アイテム種類設定</h3>
-                            <div class="item-type-list" id="itemTypeList">
-                                <!-- 動的に生成 -->
-                            </div>
-                            <button id="addItemTypeBtn" class="btn btn-info">
-                                アイテム種類を追加
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -661,6 +508,14 @@
                     <button class="btn-back" onclick="app.backToWorkList()">← 作品一覧に戻る</button>
                     <div class="current-work-header" id="currentWorkHeader">
                         <h2 id="currentWorkTitle">作品タイトル</h2>
+                        <div class="plot-export-buttons">
+                            <button onclick="app.exportPlotToText()" class="btn btn-secondary btn-sm">
+                                📋 テキストコピー
+                            </button>
+                            <button onclick="app.exportPlotToFile()" class="btn btn-secondary btn-sm">
+                                💾 ファイル出力
+                            </button>
+                        </div>
                         <span class="badge badge-info" id="currentWorkGenre"></span>
                     </div>
                 </div>
@@ -745,8 +600,12 @@
                             <input type="number" id="characterLevel" class="form-control" value="1" min="1">
                         </div>
                         <div class="form-group">
-                            <label for="characterImageUrl">画像URL (任意)</label>
-                            <input type="url" id="characterImageUrl" class="form-control" placeholder="https://example.com/image.png">
+                            <label for="characterImage">画像 (任意)</label>
+                            <div class="image-input-group">
+                                <input type="text" id="characterImage" class="form-control" placeholder="画像URLまたはBase64データ" readonly>
+                                <button type="button" id="char-image-select-btn" class="btn btn-secondary btn-sm">画像選択</button>
+                            </div>
+                            <small class="form-help">画像選択ボタンから、URL指定・ファイルアップロード・ライブラリから選択できます</small>
                         </div>
                     </div>
                     <div class="form-column">
@@ -883,6 +742,13 @@
                     <label for="sceneNotes">メモ</label>
                     <textarea id="sceneNotes" class="form-control" rows="3" placeholder="メモ・アイデア"></textarea>
                 </div>
+                <div class="form-group">
+                    <label for="sceneImage">画像 (任意)</label>
+                    <div class="image-input-group">
+                        <input type="text" id="sceneImage" class="form-control" placeholder="画像URLまたはBase64データ" readonly>
+                        <button type="button" id="scene-image-select-btn" class="btn btn-secondary btn-sm">画像選択</button>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button id="saveScene" class="btn btn-primary">保存</button>
@@ -923,10 +789,80 @@
                     <label for="timelineEventDescription">説明</label>
                     <textarea id="timelineEventDescription" class="form-control" rows="4"></textarea>
                 </div>
+                <div class="form-group">
+                    <label for="timelineEventImage">画像 (任意)</label>
+                    <div class="image-input-group">
+                        <input type="text" id="timelineEventImage" class="form-control" placeholder="画像URLまたはBase64データ" readonly>
+                        <button type="button" id="timeline-image-select-btn" class="btn btn-secondary btn-sm">画像選択</button>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button id="saveTimelineEvent" class="btn btn-primary">保存</button>
                 <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像選択モーダル -->
+    <div id="imageSelectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>画像選択</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- タブ -->
+                <div class="image-upload-tabs">
+                    <button class="image-upload-tab-btn active" data-tab="url">URL指定</button>
+                    <button class="image-upload-tab-btn" data-tab="file">ファイル</button>
+                    <button class="image-upload-tab-btn" data-tab="library">ライブラリ</button>
+                </div>
+
+                <!-- URL指定タブ -->
+                <div id="url-tab" class="image-upload-tab active">
+                    <div class="form-group">
+                        <label for="imageUrlInput">画像URL</label>
+                        <input type="text" id="imageUrlInput" class="form-control" placeholder="https://example.com/image.png">
+                    </div>
+                    <button id="confirmImageUrl" class="btn btn-primary">この画像を使用</button>
+                </div>
+
+                <!-- ファイルタブ -->
+                <div id="file-tab" class="image-upload-tab">
+                    <div class="form-group">
+                        <label for="imageFileInput">画像ファイル</label>
+                        <input type="file" id="imageFileInput" class="form-control" accept="image/*">
+                        <small class="form-help">選択すると自動的にBase64に変換されて設定されます</small>
+                    </div>
+                </div>
+
+                <!-- ライブラリタブ -->
+                <div id="library-tab" class="image-upload-tab">
+                    <div class="media-library-section">
+                        <h3>メディアライブラリから選択</h3>
+                        <div id="mediaLibraryGrid" class="media-grid">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="selectFromLibrary" class="btn btn-secondary" style="margin-top: 10px;">ライブラリを更新</button>
+                    </div>
+                    <hr>
+                    <div class="media-library-section">
+                        <h3>ライブラリに新規追加</h3>
+                        <div class="form-group">
+                            <label for="libraryImageName">画像名</label>
+                            <input type="text" id="libraryImageName" class="form-control" placeholder="例: キャラクター立ち絵1">
+                        </div>
+                        <div class="form-group">
+                            <label for="libraryImageFile">画像ファイル</label>
+                            <input type="file" id="libraryImageFile" class="form-control" accept="image/*">
+                        </div>
+                        <button id="addToLibrary" class="btn btn-success">ライブラリに追加</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-modal">閉じる</button>
             </div>
         </div>
     </div>
@@ -956,9 +892,15 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="monsterImageUrl">画像URL (任意)</label>
-                    <input type="url" id="monsterImageUrl" class="form-control" placeholder="https://example.com/image.png">
-                    <small class="form-help">画像URLを入力すると一覧で表示されます</small>
+                    <label for="monsterImageUrl">画像 (任意)</label>
+                    <div class="image-input-group">
+                        <input type="text" id="monsterImageUrl" class="form-control" placeholder="https://example.com/image.png">
+                        <input type="file" id="monsterImageFile" accept="image/*" style="display: none;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('monsterImageFile').click()">ファイル</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="app.openMediaLibrary('monsterImageUrl')">ライブラリ</button>
+                    </div>
+                    <div id="monsterImagePreview" class="image-preview" style="display: none;"></div>
+                    <small class="form-help">URL直接入力、ファイルアップロード、またはメディアライブラリから選択</small>
                 </div>
                 <div class="form-group">
                     <label for="monsterDescription">説明 (任意)</label>
@@ -997,9 +939,15 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="itemImageUrl">画像URL (任意)</label>
-                    <input type="url" id="itemImageUrl" class="form-control" placeholder="https://example.com/image.png">
-                    <small class="form-help">画像URLを入力すると一覧で表示されます</small>
+                    <label for="itemImageUrl">画像 (任意)</label>
+                    <div class="image-input-group">
+                        <input type="text" id="itemImageUrl" class="form-control" placeholder="https://example.com/image.png">
+                        <input type="file" id="itemImageFile" accept="image/*" style="display: none;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('itemImageFile').click()">ファイル</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="app.openMediaLibrary('itemImageUrl')">ライブラリ</button>
+                    </div>
+                    <div id="itemImagePreview" class="image-preview" style="display: none;"></div>
+                    <small class="form-help">ファイルアップロード、URL入力、またはメディアライブラリから選択</small>
                 </div>
                 <div class="form-group">
                     <label for="itemDescription">説明 (任意)</label>
@@ -1141,6 +1089,7 @@
     <script src="js/master.js"></script>
     <script src="js/simulator.js"></script>
     <script src="js/bag.js"></script>
+    <script src="js/media.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/app.js"></script>
