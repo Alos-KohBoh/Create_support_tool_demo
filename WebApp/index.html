@@ -938,10 +938,10 @@
                         </button>
                         
                         <!-- コメント一覧 -->
-                        <div id="commentsList" class="comments-list">
+                        <div id="commentsList" class="comments-list" style="margin-top: 30px;">
                             <h3>コメント一覧</h3>
-                            <div id="commentsView" class="empty-message">
-                                コメントがまだありません
+                            <div id="commentsView">
+                                <div class="empty-message">コメントがありません</div>
                             </div>
                         </div>
                     </div>
@@ -982,9 +982,23 @@
 
                 <!-- ワールドマップタブ -->
                 <div id="worldmap-content" class="main-tab-content" style="display: none;">
+                    <!-- 世界観設定セクション -->
+                    <div class="card world-setting-section">
+                        <h2>📖 世界観設定</h2>
+                        <div class="form-group">
+                            <label for="worldSettingText">作品全体の世界観・設定</label>
+                            <textarea id="worldSettingText" class="form-control" rows="8" placeholder="時代背景、魔法体系、社会構造、歴史、文化など、作品全体の世界観を記述してください..."></textarea>
+                        </div>
+                        <button id="saveWorldSettingBtn" class="btn btn-success">
+                            💾 世界観設定を保存
+                        </button>
+                        <small class="text-muted" style="margin-left: 10px;">最終更新: <span id="worldSettingLastUpdate">未保存</span></small>
+                    </div>
+
+                    <!-- 地理・場所管理セクション -->
                     <div class="card">
                         <div class="list-header">
-                            <h2>🌎 世界観・地理管理</h2>
+                            <h2>🗺️ 地理・場所管理</h2>
                             <button id="addLocationBtn" class="btn btn-success">
                                 場所を追加
                             </button>

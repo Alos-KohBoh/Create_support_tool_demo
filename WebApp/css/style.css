@@ -2094,6 +2094,21 @@ textarea.form-control {
     line-height: 1.6;
 }
 
+.work-worldsetting {
+    color: var(--text-secondary);
+    margin: 12px 0;
+    padding: 10px;
+    background: var(--light-bg);
+    border-left: 3px solid var(--accent-color);
+    border-radius: 4px;
+    line-height: 1.6;
+    font-size: 0.95em;
+}
+
+.work-worldsetting strong {
+    color: var(--accent-color);
+}
+
 .work-meta {
     display: flex;
     gap: 16px;
@@ -3427,7 +3442,28 @@ input[type="range"] {
     font-size: 0.85em;
 }
 
-/* �ύX���� */
+/* 世界観設定セクション */
+.world-setting-section {
+    margin-bottom: 30px;
+}
+
+.world-setting-section h2 {
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 1.3em;
+}
+
+.world-setting-section textarea {
+    font-family: inherit;
+    line-height: 1.8;
+}
+
+.world-setting-section .text-muted {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+/* 変更履歴 */
 .history-list {
     margin-top: 20px;
 }

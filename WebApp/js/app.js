@@ -4096,6 +4096,74 @@ class App {
         }
     }
 
+    // ==========================
+    // 世界観設定機能
+    // ==========================
+
+    loadWorldSetting() {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) return;
+
+        const worldSettingText = document.getElementById('worldSettingText');
+        const lastUpdate = document.getElementById('worldSettingLastUpdate');
+        
+        if (worldSettingText) {
+            const storageKey = `worldsetting_${currentWork.id}`;
+            const data = localStorage.getItem(storageKey);
+            
+            if (data) {
+                try {
+                    const saved = JSON.parse(data);
+                    worldSettingText.value = saved.text || '';
+                    if (lastUpdate && saved.updatedAt) {
+                        lastUpdate.textContent = new Date(saved.updatedAt).toLocaleString('ja-JP');
+                    }
+                } catch (e) {
+                    worldSettingText.value = '';
+                }
+            } else {
+                worldSettingText.value = '';
+                if (lastUpdate) {
+                    lastUpdate.textContent = '未保存';
+                }
+            }
+        }
+
+        // 保存ボタンのイベントリスナー
+        const saveBtn = document.getElementById('saveWorldSettingBtn');
+        if (saveBtn && !saveBtn.hasAttribute('data-listener')) {
+            saveBtn.setAttribute('data-listener', 'true');
+            saveBtn.addEventListener('click', () => this.saveWorldSetting());
+        }
+    }
+
+    saveWorldSetting() {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const worldSettingText = document.getElementById('worldSettingText');
+        const lastUpdate = document.getElementById('worldSettingLastUpdate');
+        
+        if (!worldSettingText) return;
+
+        const storageKey = `worldsetting_${currentWork.id}`;
+        const data = {
+            text: worldSettingText.value,
+            updatedAt: new Date().toISOString()
+        };
+
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        
+        if (lastUpdate) {
+            lastUpdate.textContent = new Date(data.updatedAt).toLocaleString('ja-JP');
+        }
+
+        alert('世界観設定を保存しました');
+    }
+
     // シーン管理
     addSceneToChapter(chapterId) {
         this.editingSceneId = null;
@@ -4374,6 +4442,15 @@ class App {
 
         // 章一覧を表示
         this.renderChapterList();
+
+        // 世界観設定を読み込み
+        this.loadWorldSetting();
+
+        // コメント一覧を表示
+        this.renderComments();
+
+        // コメント用セレクトボックスを更新
+        this.updateCommentChapterSelect();
     }
 
     backToWorkList() {
