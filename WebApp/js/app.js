@@ -1,14 +1,26 @@
 // メインアプリケーション
 class App {
     constructor() {
-        this.dataStorage = new DataStorage();
+        // プロジェクトマネージャーを先に初期化
+        this.projectManager = new ProjectManager();
+        
+        // データストレージにプロジェクトマネージャーを渡す
+        this.dataStorage = new DataStorage(this.projectManager);
         this.simulator = new DropSimulator();
         this.uiManager = new UIManager();
         this.bagManager = new BagManager();
         this.characterManager = new CharacterManager();
         this.workManager = new WorkManager();
         this.plotManager = new PlotManager();
+        this.mediaLibrary = new MediaLibrary();
         this.navigationManager = new NavigationManager();
+        this.backupManager = new BackupManager();
+        this.tagManager = new TagManager();
+        this.relationshipManager = new RelationshipManager();
+        this.collaborationManager = new CollaborationManager();
+        this.outputManager = new OutputManager();
+        this.templateManager = new TemplateManager();
+        this.worldMapManager = new WorldMapManager();
         this.selectedMonster = null;
         this.addedItemsToBAG = new Set(); // 追加済みアイテムを追跡
         this.editingCharacterId = null;
@@ -16,6 +28,7 @@ class App {
         this.editingChapterId = null;
         this.editingSceneId = null;
         this.editingTimelineEventId = null;
+        this.currentImageInputId = null; // メディアライブラリから画像を選択する際のターゲット入力フィールド
         
         // マスタマネージャー初期化
         masterManager = new MasterDataManager();
@@ -41,11 +54,53 @@ class App {
         // キャラクター一覧を表示
         this.renderCharacterList();
         
+        // 関係性リストを表示
+        this.renderRelationshipList();
+        
         // 作品一覧を表示
         this.renderWorkList();
         
         // プロット一覧を表示
         this.renderChapterList();
+        
+        // シーンカード表示を初期化
+        this.renderSceneCards();
+        
+        // プロット分析を表示
+        this.renderPlotAnalytics();
+
+        // AI機能を初期化
+        this.initializeAIFeatures();
+
+        // コラボレーション機能を初期化
+        this.initializeCollaborationFeatures();
+
+        // 出力・公開機能を初期化
+        this.initializeOutputFeatures();
+
+        // テンプレート機能を初期化
+        this.initializeTemplateFeatures();
+
+        // ワールドマップ機能を初期化
+        this.initializeWorldMapFeatures();
+
+        // バックアップ情報を更新
+        this.updateBackupInfo();
+
+        // バックアップ設定を読み込み
+        const autoBackupEnabled = this.backupManager.isAutoBackupEnabled();
+        const autoBackupInterval = this.backupManager.getAutoBackupInterval();
+        const enabledCheckbox = document.getElementById('autoBackupEnabled');
+        const intervalInput = document.getElementById('autoBackupInterval');
+        if (enabledCheckbox) {
+            enabledCheckbox.checked = autoBackupEnabled;
+        }
+        if (intervalInput) {
+            intervalInput.value = autoBackupInterval;
+        }
+
+        // プロジェクト選択を更新
+        this.updateProjectSelect();
     }
 
     // モーダルのセレクトボックスを初期化
@@ -90,6 +145,95 @@ class App {
         document.getElementById('addItemBtn').addEventListener('click', () => {
             this.uiManager.showModal('itemModal');
         });
+
+        // 自動バックアップ設定ボタン
+        const saveBackupSettings = document.getElementById('saveBackupSettings');
+        if (saveBackupSettings) {
+            saveBackupSettings.addEventListener('click', () => {
+                this.saveBackupSettings();
+            });
+        }
+
+        // プロジェクト関連ボタン
+        const currentProjectSelect = document.getElementById('currentProjectSelect');
+        if (currentProjectSelect) {
+            currentProjectSelect.addEventListener('change', (e) => {
+                this.switchProject(e.target.value);
+            });
+        }
+
+        const newProjectBtn = document.getElementById('newProjectBtn');
+        if (newProjectBtn) {
+            newProjectBtn.addEventListener('click', () => {
+                this.showProjectModal(true);
+            });
+        }
+
+        const editProjectBtn = document.getElementById('editProjectBtn');
+        if (editProjectBtn) {
+            editProjectBtn.addEventListener('click', () => {
+                this.showProjectModal(false);
+            });
+        }
+
+        const deleteProjectBtn = document.getElementById('deleteProjectBtn');
+        if (deleteProjectBtn) {
+            deleteProjectBtn.addEventListener('click', () => {
+                this.deleteProject();
+            });
+        }
+
+        const exportProjectBtn = document.getElementById('exportProjectBtn');
+        if (exportProjectBtn) {
+            exportProjectBtn.addEventListener('click', () => {
+                this.exportProject();
+            });
+        }
+
+        const importProjectBtn = document.getElementById('importProjectBtn');
+        if (importProjectBtn) {
+            importProjectBtn.addEventListener('click', () => {
+                document.getElementById('importProjectInput').click();
+            });
+        }
+
+        const importProjectInput = document.getElementById('importProjectInput');
+        if (importProjectInput) {
+            importProjectInput.addEventListener('change', (e) => {
+                this.importProject(e.target.files[0]);
+            });
+        }
+
+        const saveProject = document.getElementById('saveProject');
+        if (saveProject) {
+            saveProject.addEventListener('click', () => {
+                this.saveProjectInfo();
+            });
+        }
+
+        // 手動バックアップ作成ボタン
+        const createBackupBtn = document.getElementById('createBackupBtn');
+        if (createBackupBtn) {
+            createBackupBtn.addEventListener('click', () => {
+                this.createManualBackup();
+            });
+        }
+
+        // バックアップ復元ボタン
+        const restoreBackupBtn = document.getElementById('restoreBackupBtn');
+        if (restoreBackupBtn) {
+            restoreBackupBtn.addEventListener('click', () => {
+                document.getElementById('restoreBackupInput').click();
+            });
+        }
+
+        // バックアップファイル選択
+        const restoreBackupInput = document.getElementById('restoreBackupInput');
+        if (restoreBackupInput) {
+            restoreBackupInput.addEventListener('change', (e) => {
+                this.restoreFromBackup(e.target.files[0]);
+            });
+        }
 
         // データリセットボタン
         document.getElementById('resetDataBtn').addEventListener('click', () => {
@@ -161,6 +305,32 @@ class App {
             this.saveDrops();
         });
 
+        // キャラクターフィルター
+        const characterJobFilter = document.getElementById('characterJobFilter');
+        if (characterJobFilter) {
+            characterJobFilter.addEventListener('change', () => this.filterCharacterList());
+        }
+
+        const characterRaceFilter = document.getElementById('characterRaceFilter');
+        if (characterRaceFilter) {
+            characterRaceFilter.addEventListener('change', () => this.filterCharacterList());
+        }
+
+        const characterTagFilter = document.getElementById('characterTagFilter');
+        if (characterTagFilter) {
+            characterTagFilter.addEventListener('change', () => this.filterCharacterList());
+        }
+
+        const clearCharacterFilter = document.getElementById('clearCharacterFilter');
+        if (clearCharacterFilter) {
+            clearCharacterFilter.addEventListener('click', () => {
+                if (characterJobFilter) characterJobFilter.value = '';
+                if (characterRaceFilter) characterRaceFilter.value = '';
+                if (characterTagFilter) characterTagFilter.value = '';
+                this.renderCharacterList();
+            });
+        }
+
         // キャラクター追加ボタン
         const addCharacterBtn = document.getElementById('addCharacterBtn');
         if (addCharacterBtn) {
@@ -176,6 +346,34 @@ class App {
         if (saveCharacterBtn) {
             saveCharacterBtn.addEventListener('click', () => {
                 this.saveCharacter();
+            });
+        }
+
+        // 関係性追加ボタン
+        const addRelationshipBtn = document.getElementById('addRelationshipBtn');
+        if (addRelationshipBtn) {
+            addRelationshipBtn.addEventListener('click', () => {
+                this.editingRelationshipId = null;
+                this.showRelationshipModal();
+            });
+        }
+
+        // 関係性保存ボタン
+        const saveRelationshipBtn = document.getElementById('saveRelationship');
+        if (saveRelationshipBtn) {
+            saveRelationshipBtn.addEventListener('click', () => {
+                this.saveRelationship();
+            });
+        }
+
+        // 関係性の強さスライダー
+        const relationshipStrength = document.getElementById('relationshipStrength');
+        if (relationshipStrength) {
+            relationshipStrength.addEventListener('input', (e) => {
+                const valueSpan = document.getElementById('relationshipStrengthValue');
+                if (valueSpan) {
+                    valueSpan.textContent = e.target.value;
+                }
             });
         }
 
@@ -234,6 +432,14 @@ class App {
         if (saveTimelineEventBtn) {
             saveTimelineEventBtn.addEventListener('click', () => {
                 this.saveTimelineEvent();
+            });
+        }
+
+        // シーンカードフィルター
+        const sceneCardChapterFilter = document.getElementById('sceneCardChapterFilter');
+        if (sceneCardChapterFilter) {
+            sceneCardChapterFilter.addEventListener('change', () => {
+                this.renderSceneCards();
             });
         }
 
@@ -965,6 +1171,247 @@ class App {
         location.reload(); // ページをリロード
     }
 
+    // バックアップ設定を保存
+    saveBackupSettings() {
+        const enabled = document.getElementById('autoBackupEnabled').checked;
+        const interval = parseInt(document.getElementById('autoBackupInterval').value);
+
+        if (interval < 5 || interval > 1440) {
+            alert('バックアップ間隔は5分から1440分（24時間）の範囲で設定してください。');
+            return;
+        }
+
+        this.backupManager.setAutoBackupEnabled(enabled);
+        this.backupManager.setAutoBackupInterval(interval);
+
+        if (enabled) {
+            this.backupManager.startAutoBackup();
+            alert(`自動バックアップを有効にしました。\n間隔: ${interval}分`);
+        } else {
+            this.backupManager.stopAutoBackup();
+            alert('自動バックアップを無効にしました。');
+        }
+
+        this.updateBackupInfo();
+    }
+
+    // プロジェクト管理メソッド
+    updateProjectSelect() {
+        const select = document.getElementById('currentProjectSelect');
+        if (!select) return;
+
+        select.innerHTML = '';
+        const projects = this.projectManager.getAllProjects();
+        
+        projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.name;
+            if (project.id === this.projectManager.currentProjectId) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        this.updateProjectInfo();
+    }
+
+    updateProjectInfo() {
+        const infoText = document.getElementById('projectInfoText');
+        if (!infoText) return;
+
+        const project = this.projectManager.getCurrentProject();
+        if (project) {
+            let text = '';
+            text += `プロジェクト名: ${project.name}\n`;
+            text += `説明: ${project.description || 'なし'}\n`;
+            text += `作成日: ${new Date(project.createdAt).toLocaleString('ja-JP')}\n`;
+            text += `更新日: ${new Date(project.updatedAt).toLocaleString('ja-JP')}`;
+            infoText.textContent = text;
+        } else {
+            infoText.textContent = 'プロジェクトが選択されていません。';
+        }
+    }
+
+    showProjectModal(isNew) {
+        const modal = document.getElementById('projectModal');
+        const title = document.getElementById('projectModalTitle');
+        const nameInput = document.getElementById('projectName');
+        const descInput = document.getElementById('projectDescription');
+
+        if (isNew) {
+            title.textContent = '新しいプロジェクト';
+            nameInput.value = '';
+            descInput.value = '';
+        } else {
+            const project = this.projectManager.getCurrentProject();
+            if (!project) {
+                alert('プロジェクトが選択されていません。');
+                return;
+            }
+            title.textContent = 'プロジェクト編集';
+            nameInput.value = project.name;
+            descInput.value = project.description || '';
+        }
+
+        this.uiManager.showModal('projectModal');
+    }
+
+    saveProjectInfo() {
+        const nameInput = document.getElementById('projectName');
+        const descInput = document.getElementById('projectDescription');
+        const title = document.getElementById('projectModalTitle');
+
+        const name = nameInput.value.trim();
+        const description = descInput.value.trim();
+
+        if (!name) {
+            alert('プロジェクト名を入力してください。');
+            return;
+        }
+
+        if (title.textContent === '新しいプロジェクト') {
+            // 新規作成
+            const project = this.projectManager.createProject(name, description);
+            this.projectManager.switchProject(project.id);
+            alert('新しいプロジェクトを作成しました。');
+        } else {
+            // 編集
+            const projectId = this.projectManager.currentProjectId;
+            this.projectManager.updateProject(projectId, name, description);
+            alert('プロジェクト情報を更新しました。');
+        }
+
+        this.uiManager.hideModal('projectModal');
+        this.updateProjectSelect();
+    }
+
+    switchProject(projectId) {
+        if (!confirm('プロジェクトを切り替えますか？ページがリロードされます。')) {
+            // キャンセルされた場合は選択をリセット
+            const select = document.getElementById('currentProjectSelect');
+            if (select) {
+                select.value = this.projectManager.currentProjectId;
+            }
+            return;
+        }
+
+        this.projectManager.switchProject(projectId);
+        location.reload();
+    }
+
+    deleteProject() {
+        const project = this.projectManager.getCurrentProject();
+        if (!project) {
+            alert('プロジェクトが選択されていません。');
+            return;
+        }
+
+        const projectName = project.name;
+        if (!confirm(`プロジェクト「${projectName}」を削除しますか？\nすべてのデータが失われます。`)) {
+            return;
+        }
+
+        if (!confirm('本当に削除しますか？この操作は取り消せません。')) {
+            return;
+        }
+
+        this.projectManager.deleteProject(project.id);
+        alert('プロジェクトを削除しました。ページをリロードします。');
+        location.reload();
+    }
+
+    exportProject() {
+        const project = this.projectManager.getCurrentProject();
+        if (!project) {
+            alert('プロジェクトが選択されていません。');
+            return;
+        }
+
+        try {
+            const projectData = this.projectManager.exportProjectData(project.id);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `project_${project.name}_${timestamp}.json`;
+
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert('プロジェクトをエクスポートしました。');
+        } catch (error) {
+            console.error('プロジェクトエクスポートエラー:', error);
+            alert('プロジェクトのエクスポートに失敗しました。');
+        }
+    }
+
+    importProject(file) {
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const projectData = JSON.parse(e.target.result);
+                const project = this.projectManager.importProjectData(projectData);
+                alert(`プロジェクト「${project.name}」をインポートしました。`);
+                this.updateProjectSelect();
+            } catch (error) {
+                console.error('プロジェクトインポートエラー:', error);
+                alert('プロジェクトのインポートに失敗しました。');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // 手動バックアップを作成
+    createManualBackup() {
+        try {
+            this.backupManager.createManualBackup();
+            alert('バックアップファイルをダウンロードしました。');
+            this.updateBackupInfo();
+        } catch (error) {
+            console.error('バックアップ作成エラー:', error);
+            alert('バックアップの作成に失敗しました。');
+        }
+    }
+
+    // バックアップから復元
+    restoreFromBackup(file) {
+        if (!file) return;
+
+        if (!confirm('現在のデータはすべて上書きされます。バックアップから復元しますか？')) {
+            return;
+        }
+
+        this.backupManager.restoreFromFile(file).then(() => {
+            alert('バックアップからデータを復元しました。ページをリロードします。');
+            location.reload();
+        }).catch(error => {
+            console.error('バックアップ復元エラー:', error);
+            alert('バックアップの復元に失敗しました。');
+        });
+    }
+
+    // バックアップ情報を更新
+    updateBackupInfo() {
+        const info = this.backupManager.getBackupInfo();
+        const infoText = document.getElementById('backupInfoText');
+        
+        if (infoText) {
+            let text = '';
+            text += `自動バックアップ: ${info.autoBackupEnabled ? '有効' : '無効'}\n`;
+            text += `バックアップ間隔: ${info.autoBackupInterval}分\n`;
+            text += `最終バックアップ: ${info.lastBackupTime || 'なし'}\n`;
+            text += `データサイズ: ${info.dataSize}`;
+            infoText.textContent = text;
+        }
+    }
+
     // データ一覧を更新
     refreshDataLists() {
         try {
@@ -1495,6 +1942,7 @@ class App {
 
         const dialoguesText = document.getElementById('characterDialogues').value.trim();
         const skillsText = document.getElementById('characterSkills').value.trim();
+        const tagsText = document.getElementById('characterTags').value.trim();
 
         // 動的ステータスを収集
         const stats = {};
@@ -1502,6 +1950,9 @@ class App {
             const statId = input.dataset.statId;
             stats[statId] = parseInt(input.value) || 0;
         });
+
+        // タグを配列に変換
+        const tags = tagsText ? tagsText.split(',').map(t => t.trim()).filter(t => t) : [];
 
         const characterData = {
             name,
@@ -1514,7 +1965,8 @@ class App {
             background: document.getElementById('characterBackground').value.trim(),
             dialogues: dialoguesText ? dialoguesText.split('\n').filter(d => d.trim()) : [],
             skills: skillsText ? skillsText.split('\n').filter(s => s.trim()) : [],
-            imageUrl: document.getElementById('characterImage').value.trim()
+            imageUrl: document.getElementById('characterImage').value.trim(),
+            tags: tags
         };
 
         if (this.editingCharacterId) {
@@ -1531,6 +1983,7 @@ class App {
 
         this.uiManager.hideModal('characterModal');
         this.renderCharacterList();
+        this.updateCharacterTagFilter(); // タグフィルターを更新
     }
 
     renderCharacterList() {
@@ -1559,6 +2012,23 @@ class App {
                 return acc + cur;
             }, '<div class="stat-row">') + '</div>';
 
+            // タグ表示
+            const tagsHtml = character.tags && character.tags.length > 0 
+                ? `<div class="tags">${character.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>`
+                : '';
+
+            // 経験値バー
+            const expProgress = character.getExpProgress();
+            const requiredExp = character.getRequiredExpForNextLevel();
+            const expBarHtml = `
+                <div class="exp-bar-container">
+                    <div class="exp-label">EXP: ${character.exp} / ${requiredExp}</div>
+                    <div class="exp-bar">
+                        <div class="exp-bar-fill" style="width: ${expProgress}%"></div>
+                    </div>
+                </div>
+            `;
+
             html += `
                 <div class="data-card">
                     ${character.imageUrl ? `<img src="${character.imageUrl}" alt="${character.name}" class="data-card-image">` : ''}
@@ -1570,12 +2040,16 @@ class App {
                             ${character.element ? `<span class="badge badge-warning">${character.element}</span>` : ''}
                             <span class="badge badge-primary">Lv.${character.level}</span>
                         </div>
+                        ${expBarHtml}
                         <div class="character-stats">
                             ${statsHtml}
                         </div>
                         ${character.personality ? `<p class="character-personality"><strong>性格:</strong> ${character.personality}</p>` : ''}
                         ${character.skills.length > 0 ? `<p class="character-skills"><strong>スキル:</strong> ${character.skills.join(', ')}</p>` : ''}
+                        ${tagsHtml}
                         <div class="data-card-actions">
+                            <button class="btn btn-success btn-sm" onclick="app.addExpToCharacter('${character.id}')">経験値追加</button>
+                            <button class="btn btn-info btn-sm" onclick="app.viewLevelHistory('${character.id}')">履歴</button>
                             <button class="btn btn-primary btn-sm" onclick="app.editCharacter('${character.id}')">編集</button>
                             <button class="btn btn-danger btn-sm" onclick="app.deleteCharacter('${character.id}')">削除</button>
                         </div>
@@ -1585,6 +2059,9 @@ class App {
         });
         html += '</div>';
         container.innerHTML = html;
+        
+        // タグフィルターを更新
+        this.updateCharacterTagFilter();
     }
 
     editCharacter(id) {
@@ -1600,6 +2077,7 @@ class App {
         document.getElementById('characterDialogues').value = character.dialogues.join('\n');
         document.getElementById('characterSkills').value = character.skills.join('\n');
         document.getElementById('characterImage').value = character.imageUrl || '';
+        document.getElementById('characterTags').value = character.tags ? character.tags.join(', ') : '';
 
         // マスタ設定から選択肢を更新
         this.updateCharacterFormSelects();
@@ -1624,8 +2102,333 @@ class App {
     deleteCharacter(id) {
         if (!confirm('このキャラクターを削除しますか?')) return;
         
+        // キャラクターに関連する関係性も削除
+        const relationships = this.relationshipManager.getRelationshipsForCharacter(id);
+        relationships.forEach(rel => {
+            this.relationshipManager.deleteRelationship(rel.id);
+        });
+        
         this.characterManager.deleteCharacter(id);
         this.renderCharacterList();
+        this.renderRelationshipList();
+        this.updateCharacterTagFilter(); // タグフィルターを更新
+    }
+
+    // 経験値を追加
+    addExpToCharacter(id) {
+        const character = this.characterManager.getCharacter(id);
+        if (!character) return;
+
+        const expAmount = prompt(`${character.name}に追加する経験値を入力してください:`, '100');
+        if (!expAmount || isNaN(expAmount)) return;
+
+        const amount = parseInt(expAmount);
+        if (amount <= 0) {
+            alert('正の数値を入力してください。');
+            return;
+        }
+
+        const leveledUp = character.addExp(amount);
+        this.characterManager.updateCharacter(id, character);
+
+        if (leveledUp) {
+            alert(`${character.name}がレベル${character.level}にレベルアップしました！`);
+        } else {
+            alert(`${character.name}に${amount}の経験値を追加しました。`);
+        }
+
+        this.renderCharacterList();
+    }
+
+    // レベルアップ履歴を表示
+    viewLevelHistory(id) {
+        const character = this.characterManager.getCharacter(id);
+        if (!character) return;
+
+        if (character.levelHistory.length === 0) {
+            alert('レベルアップ履歴がありません。');
+            return;
+        }
+
+        let message = `${character.name}のレベルアップ履歴:\n\n`;
+        character.levelHistory.forEach((history, index) => {
+            const date = new Date(history.timestamp);
+            message += `${index + 1}. レベル${history.level} (${date.toLocaleString('ja-JP')})\n`;
+        });
+
+        alert(message);
+    }
+
+    // ==========================
+    // 関係性管理機能
+    // ==========================
+
+    showRelationshipModal() {
+        // キャラクター選択肢を更新
+        this.updateRelationshipCharacterSelects();
+        
+        // フォームをクリア
+        document.getElementById('relationship1').value = '';
+        document.getElementById('relationship2').value = '';
+        document.getElementById('relationshipType').value = '';
+        document.getElementById('relationshipStrength').value = '50';
+        document.getElementById('relationshipStrengthValue').textContent = '50';
+        document.getElementById('relationshipDescription').value = '';
+        
+        const title = document.getElementById('relationshipModalTitle');
+        if (title) {
+            title.textContent = this.editingRelationshipId ? '関係性を編集' : '関係性を追加';
+        }
+        
+        this.uiManager.showModal('relationshipModal');
+    }
+
+    updateRelationshipCharacterSelects() {
+        const select1 = document.getElementById('relationship1');
+        const select2 = document.getElementById('relationship2');
+        
+        if (!select1 || !select2) return;
+        
+        const characters = this.characterManager.getAllCharacters();
+        
+        [select1, select2].forEach(select => {
+            select.innerHTML = '<option value="">-- キャラクターを選択 --</option>';
+            characters.forEach(character => {
+                const option = document.createElement('option');
+                option.value = character.id;
+                option.textContent = character.name;
+                select.appendChild(option);
+            });
+        });
+    }
+
+    saveRelationship() {
+        const char1 = document.getElementById('relationship1').value;
+        const char2 = document.getElementById('relationship2').value;
+        const type = document.getElementById('relationshipType').value;
+        const strength = parseInt(document.getElementById('relationshipStrength').value);
+        const description = document.getElementById('relationshipDescription').value.trim();
+
+        if (!char1 || !char2) {
+            alert('両方のキャラクターを選択してください。');
+            return;
+        }
+
+        if (char1 === char2) {
+            alert('異なるキャラクターを選択してください。');
+            return;
+        }
+
+        if (!type) {
+            alert('関係性のタイプを選択してください。');
+            return;
+        }
+
+        // 既存の関係性をチェック
+        const existing = this.relationshipManager.getRelationshipBetween(char1, char2);
+        if (existing && !this.editingRelationshipId) {
+            alert('この2人の関係性は既に登録されています。');
+            return;
+        }
+
+        const relationshipData = {
+            characterId1: char1,
+            characterId2: char2,
+            relationshipType: type,
+            strength: strength,
+            description: description
+        };
+
+        if (this.editingRelationshipId) {
+            this.relationshipManager.updateRelationship(this.editingRelationshipId, relationshipData);
+        } else {
+            const relationship = new CharacterRelationship(
+                this.relationshipManager.generateId(),
+                char1,
+                char2,
+                type,
+                strength,
+                description
+            );
+            this.relationshipManager.addRelationship(relationship);
+        }
+
+        this.uiManager.hideModal('relationshipModal');
+        this.renderRelationshipList();
+    }
+
+    renderRelationshipList() {
+        const container = document.getElementById('relationshipListView');
+        if (!container) return;
+
+        const relationships = this.relationshipManager.getAllRelationships();
+
+        if (relationships.length === 0) {
+            container.innerHTML = '<div class="empty-message">関係性が登録されていません</div>';
+            return;
+        }
+
+        let html = '<div class="relationship-grid">';
+        relationships.forEach(rel => {
+            const char1 = this.characterManager.getCharacter(rel.characterId1);
+            const char2 = this.characterManager.getCharacter(rel.characterId2);
+
+            if (!char1 || !char2) return;
+
+            const strengthColor = rel.strength >= 75 ? '#28a745' : 
+                                 rel.strength >= 50 ? '#ffc107' : 
+                                 rel.strength >= 25 ? '#fd7e14' : '#dc3545';
+
+            html += `
+                <div class="relationship-card">
+                    <div class="relationship-characters">
+                        <div class="relationship-char">
+                            ${char1.imageUrl ? `<img src="${char1.imageUrl}" alt="${char1.name}">` : ''}
+                            <span>${char1.name}</span>
+                        </div>
+                        <div class="relationship-arrow">
+                            <span class="relationship-type">${rel.relationshipType}</span>
+                            <div class="relationship-strength-bar">
+                                <div class="relationship-strength-fill" style="width: ${rel.strength}%; background: ${strengthColor};"></div>
+                            </div>
+                            <span class="relationship-strength-text">${rel.strength}%</span>
+                        </div>
+                        <div class="relationship-char">
+                            ${char2.imageUrl ? `<img src="${char2.imageUrl}" alt="${char2.name}">` : ''}
+                            <span>${char2.name}</span>
+                        </div>
+                    </div>
+                    ${rel.description ? `<p class="relationship-description">${rel.description}</p>` : ''}
+                    <div class="relationship-actions">
+                        <button class="btn btn-primary btn-sm" onclick="app.editRelationship('${rel.id}')">編集</button>
+                        <button class="btn btn-danger btn-sm" onclick="app.deleteRelationship('${rel.id}')">削除</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
+    }
+
+    editRelationship(id) {
+        const relationship = this.relationshipManager.getRelationship(id);
+        if (!relationship) return;
+
+        this.editingRelationshipId = id;
+        
+        document.getElementById('relationship1').value = relationship.characterId1;
+        document.getElementById('relationship2').value = relationship.characterId2;
+        document.getElementById('relationshipType').value = relationship.relationshipType;
+        document.getElementById('relationshipStrength').value = relationship.strength;
+        document.getElementById('relationshipStrengthValue').textContent = relationship.strength;
+        document.getElementById('relationshipDescription').value = relationship.description || '';
+
+        this.showRelationshipModal();
+    }
+
+    deleteRelationship(id) {
+        if (!confirm('この関係性を削除しますか?')) return;
+        
+        this.relationshipManager.deleteRelationship(id);
+        this.renderRelationshipList();
+    }
+
+    // ==========================
+    // プロット管理機能
+    // ==========================
+    updateCharacterTagFilter() {
+        const select = document.getElementById('characterTagFilter');
+        if (!select) return;
+
+        const characters = this.characterManager.getAllCharacters();
+        const allTags = new Set();
+        
+        characters.forEach(character => {
+            if (character.tags) {
+                character.tags.forEach(tag => allTags.add(tag));
+            }
+        });
+
+        select.innerHTML = '<option value="">タグ: すべて</option>';
+        Array.from(allTags).sort().forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag;
+            option.textContent = tag;
+            select.appendChild(option);
+        });
+    }
+
+    // キャラクターリストのフィルタリング
+    filterCharacterList() {
+        const jobFilter = document.getElementById('characterJobFilter')?.value || '';
+        const raceFilter = document.getElementById('characterRaceFilter')?.value || '';
+        const tagFilter = document.getElementById('characterTagFilter')?.value || '';
+
+        const characters = this.characterManager.getAllCharacters();
+        const filtered = characters.filter(character => {
+            if (jobFilter && character.job !== jobFilter) return false;
+            if (raceFilter && character.race !== raceFilter) return false;
+            if (tagFilter && (!character.tags || !character.tags.includes(tagFilter))) return false;
+            return true;
+        });
+
+        // フィルター結果を表示
+        this.renderFilteredCharacterList(filtered);
+    }
+
+    renderFilteredCharacterList(characters) {
+        const container = document.getElementById('characterListView');
+        if (!container) return;
+
+        if (characters.length === 0) {
+            container.innerHTML = '<div class="empty-message">条件に一致するキャラクターがありません</div>';
+            return;
+        }
+
+        const statsList = masterManager.masterConfig.characterStats || [];
+
+        let html = '<div class="data-grid">';
+        characters.forEach(character => {
+            // ステータス表示を生成
+            const statsHtml = statsList.map((stat, index) => {
+                const value = character.stats[stat.id] || stat.defaultValue;
+                return `<span>${stat.label}: ${value}</span>`;
+            }).reduce((acc, cur, index) => {
+                if (index % 3 === 0) {
+                    return acc + `</div><div class="stat-row">${cur}`;
+                }
+                return acc + cur;
+            }, '<div class="stat-row">') + '</div>';
+
+            // タグ表示
+            const tagsHtml = character.tags && character.tags.length > 0 
+                ? `<div class="tags">${character.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>`
+                : '';
+
+            html += `
+                <div class="data-card">
+                    ${character.imageUrl ? `<img src="${character.imageUrl}" alt="${character.name}" class="data-card-image">` : ''}
+                    <h3>${character.name}</h3>
+                    <p><strong>職業:</strong> ${character.job || 'なし'}</p>
+                    <p><strong>種族:</strong> ${character.race || 'なし'}</p>
+                    <p><strong>属性:</strong> ${character.element || 'なし'}</p>
+                    <p><strong>レベル:</strong> ${character.level}</p>
+                    <div class="stat-display">
+                        ${statsHtml}
+                    </div>
+                    ${tagsHtml}
+                    <p><strong>性格:</strong> ${character.personality || 'なし'}</p>
+                    <div class="button-group">
+                        <button class="btn btn-primary btn-sm" onclick="app.editCharacter('${character.id}')">編集</button>
+                        <button class="btn btn-danger btn-sm" onclick="app.deleteCharacter('${character.id}')">削除</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
     }
 
     // ==========================
@@ -1785,6 +2588,1512 @@ class App {
         
         this.plotManager.saveChapters();
         this.renderChapterList();
+        this.renderSceneCards(); // シーンカードも更新
+    }
+
+    // ==========================
+    // シーンカード機能
+    // ==========================
+
+    renderSceneCards() {
+        const container = document.getElementById('sceneCardsView');
+        const filterSelect = document.getElementById('sceneCardChapterFilter');
+        
+        if (!container) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            container.innerHTML = '<div class="empty-message">作品を選択してください</div>';
+            return;
+        }
+
+        // フィルター選択肢を更新
+        if (filterSelect) {
+            const chapters = this.plotManager.getChaptersByWorkId(currentWork.id);
+            filterSelect.innerHTML = '<option value="">すべての章</option>';
+            chapters.forEach(chapter => {
+                const option = document.createElement('option');
+                option.value = chapter.id;
+                option.textContent = chapter.title;
+                filterSelect.appendChild(option);
+            });
+        }
+
+        const selectedChapterId = filterSelect ? filterSelect.value : '';
+        let scenes = [];
+
+        if (selectedChapterId) {
+            scenes = this.plotManager.getScenesByChapterId(selectedChapterId);
+        } else {
+            const chapters = this.plotManager.getChaptersByWorkId(currentWork.id);
+            chapters.forEach(chapter => {
+                const chapterScenes = this.plotManager.getScenesByChapterId(chapter.id);
+                scenes = scenes.concat(chapterScenes);
+            });
+        }
+
+        if (scenes.length === 0) {
+            container.innerHTML = '<div class="empty-message">シーンが作成されていません</div>';
+            return;
+        }
+
+        let html = '<div class="scene-cards-grid">';
+        scenes.forEach(scene => {
+            const chapter = this.plotManager.getChapter(scene.chapterId);
+            const chapterTitle = chapter ? chapter.title : '不明な章';
+
+            // 登場キャラクター
+            const characterNames = scene.characters.map(charId => {
+                const char = this.characterManager.getCharacter(charId);
+                return char ? char.name : '不明';
+            }).join(', ');
+
+            // 文字数
+            const wordCount = scene.content ? scene.content.length : 0;
+
+            html += `
+                <div class="scene-card" draggable="true" data-scene-id="${scene.id}">
+                    <div class="scene-card-header">
+                        <h4>${scene.title}</h4>
+                        <span class="scene-card-chapter">${chapterTitle}</span>
+                    </div>
+                    <div class="scene-card-body">
+                        ${scene.location ? `<p class="scene-location">📍 ${scene.location}</p>` : ''}
+                        ${scene.timeOfDay ? `<p class="scene-time">🕐 ${scene.timeOfDay}</p>` : ''}
+                        ${characterNames ? `<p class="scene-characters">👤 ${characterNames}</p>` : ''}
+                        <p class="scene-word-count">${wordCount}文字</p>
+                        ${scene.content ? `<p class="scene-preview">${scene.content.substring(0, 100)}...</p>` : ''}
+                    </div>
+                    <div class="scene-card-actions">
+                        <button class="btn btn-primary btn-sm" onclick="app.editScene('${scene.id}')">編集</button>
+                        <button class="btn btn-danger btn-sm" onclick="app.deleteScene('${scene.id}')">削除</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
+    }
+
+    // ==========================
+    // プロット分析機能
+    // ==========================
+
+    renderPlotAnalytics() {
+        const container = document.getElementById('plotAnalyticsView');
+        if (!container) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            container.innerHTML = '<div class="empty-message">作品を選択してください</div>';
+            return;
+        }
+
+        const chapters = this.plotManager.getChaptersByWorkId(currentWork.id);
+        let totalScenes = 0;
+        let totalWords = 0;
+        const characterAppearances = {};
+
+        // 統計を計算
+        chapters.forEach(chapter => {
+            const scenes = this.plotManager.getScenesByChapterId(chapter.id);
+            totalScenes += scenes.length;
+
+            scenes.forEach(scene => {
+                if (scene.content) {
+                    totalWords += scene.content.length;
+                }
+
+                // キャラクター登場回数を集計
+                scene.characters.forEach(charId => {
+                    if (!characterAppearances[charId]) {
+                        characterAppearances[charId] = 0;
+                    }
+                    characterAppearances[charId]++;
+                });
+            });
+        });
+
+        // キャラクター登場回数をソート
+        const sortedCharacters = Object.entries(characterAppearances)
+            .map(([charId, count]) => {
+                const char = this.characterManager.getCharacter(charId);
+                return { name: char ? char.name : '不明', count: count };
+            })
+            .sort((a, b) => b.count - a.count);
+
+        // HTML生成
+        let html = '<div class="analytics-grid">';
+
+        // 基本統計
+        html += `
+            <div class="analytics-card">
+                <h3>基本統計</h3>
+                <div class="analytics-stats">
+                    <div class="analytics-stat">
+                        <span class="stat-label">章数</span>
+                        <span class="stat-value">${chapters.length}</span>
+                    </div>
+                    <div class="analytics-stat">
+                        <span class="stat-label">シーン数</span>
+                        <span class="stat-value">${totalScenes}</span>
+                    </div>
+                    <div class="analytics-stat">
+                        <span class="stat-label">総文字数</span>
+                        <span class="stat-value">${totalWords.toLocaleString()}</span>
+                    </div>
+                    <div class="analytics-stat">
+                        <span class="stat-label">平均シーン長</span>
+                        <span class="stat-value">${totalScenes > 0 ? Math.floor(totalWords / totalScenes).toLocaleString() : 0}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // キャラクター登場回数
+        html += `
+            <div class="analytics-card">
+                <h3>キャラクター登場回数</h3>
+                <div class="character-appearances">
+                    ${sortedCharacters.length > 0 ? sortedCharacters.map(char => `
+                        <div class="appearance-item">
+                            <span class="appearance-name">${char.name}</span>
+                            <div class="appearance-bar-container">
+                                <div class="appearance-bar" style="width: ${(char.count / totalScenes) * 100}%"></div>
+                            </div>
+                            <span class="appearance-count">${char.count}回</span>
+                        </div>
+                    `).join('') : '<p>キャラクターが登場していません</p>'}
+                </div>
+            </div>
+        `;
+
+        // 章別統計
+        html += `
+            <div class="analytics-card analytics-card-wide">
+                <h3>章別統計</h3>
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>章</th>
+                            <th>シーン数</th>
+                            <th>文字数</th>
+                            <th>ステータス</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        chapters.forEach(chapter => {
+            const scenes = this.plotManager.getScenesByChapterId(chapter.id);
+            let chapterWords = 0;
+            scenes.forEach(scene => {
+                if (scene.content) chapterWords += scene.content.length;
+            });
+
+            const statusLabel = {
+                'not-started': '未着手',
+                'in-progress': '執筆中',
+                'completed': '完了'
+            }[chapter.status] || chapter.status;
+
+            html += `
+                <tr>
+                    <td>${chapter.title}</td>
+                    <td>${scenes.length}</td>
+                    <td>${chapterWords.toLocaleString()}</td>
+                    <td><span class="status-badge status-${chapter.status}">${statusLabel}</span></td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        html += '</div>';
+
+        container.innerHTML = html;
+    }
+
+    // ==========================
+    // AI連携機能
+    // ==========================
+
+    initializeAIFeatures() {
+        // プロット生成ボタン
+        const generatePlotBtn = document.getElementById('generatePlotBtn');
+        if (generatePlotBtn) {
+            generatePlotBtn.addEventListener('click', () => this.generatePlotSuggestions());
+        }
+
+        // 台詞生成ボタン
+        const generateDialogueBtn = document.getElementById('generateDialogueBtn');
+        if (generateDialogueBtn) {
+            generateDialogueBtn.addEventListener('click', () => this.generateDialogueSuggestions());
+        }
+
+        // 矛盾チェックボタン
+        const checkConsistencyBtn = document.getElementById('checkConsistencyBtn');
+        if (checkConsistencyBtn) {
+            checkConsistencyBtn.addEventListener('click', () => this.checkConsistency());
+        }
+
+        // キャラクター選択肢を更新
+        this.updateDialogueCharacterSelect();
+    }
+
+    updateDialogueCharacterSelect() {
+        const select = document.getElementById('dialogueCharacterSelect');
+        if (!select) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) return;
+
+        const characters = this.characterManager.getCharactersByWorkId(currentWork.id);
+        
+        select.innerHTML = '<option value="">-- キャラクターを選択 --</option>';
+        characters.forEach(char => {
+            const option = document.createElement('option');
+            option.value = char.id;
+            option.textContent = char.name;
+            select.appendChild(option);
+        });
+    }
+
+    async generatePlotSuggestions() {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const promptInput = document.getElementById('plotPrompt');
+        const userPrompt = promptInput ? promptInput.value : '';
+
+        // ローディング表示
+        const btn = document.getElementById('generatePlotBtn');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ 生成中...';
+
+        try {
+            // AI APIを呼び出す（ここではダミーデータを返す）
+            const suggestions = await this.callPlotGenerationAPI(currentWork, userPrompt);
+            
+            // 結果を表示
+            const resultBox = document.getElementById('plotSuggestions');
+            const contentDiv = document.getElementById('plotSuggestionsContent');
+            
+            if (resultBox && contentDiv) {
+                contentDiv.innerHTML = suggestions.map((suggestion, index) => `
+                    <div class="suggestion-item">
+                        <h5>案 ${index + 1}: ${suggestion.title}</h5>
+                        <p>${suggestion.description}</p>
+                        <button class="btn btn-success btn-sm" onclick="app.applySuggestionAsChapter(${index})">
+                            この案を章として追加
+                        </button>
+                    </div>
+                `).join('');
+                resultBox.style.display = 'block';
+            }
+        } catch (error) {
+            alert('プロット生成中にエラーが発生しました: ' + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    async callPlotGenerationAPI(work, userPrompt) {
+        // 実際のAI API呼び出しに置き換えられます
+        // ここではダミーデータを返します
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const chapters = this.plotManager.getChaptersByWorkId(work.id);
+                const lastChapter = chapters.length > 0 ? chapters[chapters.length - 1].title : '序章';
+                
+                resolve([
+                    {
+                        title: `${lastChapter}からの展開`,
+                        description: `${userPrompt ? userPrompt + 'を踏まえ、' : ''}主人公が新たな試練に直面する。仲間との絆が試される場面で、過去の秘密が明らかになる。`
+                    },
+                    {
+                        title: '転機となる出来事',
+                        description: '予期せぬ出来事により、物語が大きく動き出す。敵だと思っていた人物の本当の目的が判明し、主人公は重大な決断を迫られる。'
+                    },
+                    {
+                        title: 'クライマックスへの布石',
+                        description: '物語の核心に迫る重要な情報が明らかになる。主人公は最終決戦に向けて準備を整え、仲間たちとの絆を深める。'
+                    }
+                ]);
+            }, 1500);
+        });
+    }
+
+    applySuggestionAsChapter(index) {
+        const contentDiv = document.getElementById('plotSuggestionsContent');
+        if (!contentDiv) return;
+
+        const suggestionItems = contentDiv.querySelectorAll('.suggestion-item');
+        if (!suggestionItems[index]) return;
+
+        const title = suggestionItems[index].querySelector('h5').textContent.replace(/^案 \d+: /, '');
+        const description = suggestionItems[index].querySelector('p').textContent;
+
+        // 章として追加
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) return;
+
+        const chapters = this.plotManager.getChaptersByWorkId(currentWork.id);
+        const newOrder = chapters.length > 0 ? Math.max(...chapters.map(c => c.order)) + 1 : 1;
+
+        const newChapter = {
+            id: 'chapter_' + Date.now(),
+            workId: currentWork.id,
+            title: title,
+            description: description,
+            order: newOrder,
+            status: 'not-started',
+            createdAt: new Date().toISOString()
+        };
+
+        this.plotManager.addChapter(newChapter);
+        this.renderChapterList();
+        
+        alert('章として追加しました！');
+    }
+
+    async generateDialogueSuggestions() {
+        const characterSelect = document.getElementById('dialogueCharacterSelect');
+        const situationInput = document.getElementById('dialogueSituation');
+
+        if (!characterSelect || !situationInput) return;
+
+        const characterId = characterSelect.value;
+        const situation = situationInput.value;
+
+        if (!characterId) {
+            alert('キャラクターを選択してください');
+            return;
+        }
+
+        if (!situation.trim()) {
+            alert('状況・シチュエーションを入力してください');
+            return;
+        }
+
+        const character = this.characterManager.getCharacter(characterId);
+        if (!character) return;
+
+        // ローディング表示
+        const btn = document.getElementById('generateDialogueBtn');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ 生成中...';
+
+        try {
+            // AI APIを呼び出す（ここではダミーデータを返す）
+            const suggestions = await this.callDialogueGenerationAPI(character, situation);
+            
+            // 結果を表示
+            const resultBox = document.getElementById('dialogueSuggestions');
+            const contentDiv = document.getElementById('dialogueSuggestionsContent');
+            
+            if (resultBox && contentDiv) {
+                contentDiv.innerHTML = suggestions.map((dialogue, index) => `
+                    <div class="dialogue-suggestion">
+                        <span class="dialogue-number">${index + 1}.</span>
+                        <p class="dialogue-text">"${dialogue}"</p>
+                        <button class="btn btn-secondary btn-sm" onclick="app.copyDialogue('${dialogue.replace(/'/g, "\\'")}')">
+                            📋 コピー
+                        </button>
+                    </div>
+                `).join('');
+                resultBox.style.display = 'block';
+            }
+        } catch (error) {
+            alert('台詞生成中にエラーが発生しました: ' + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    async callDialogueGenerationAPI(character, situation) {
+        // 実際のAI API呼び出しに置き換えられます
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const personality = character.personality || '真面目で誠実';
+                resolve([
+                    `${situation}だからこそ、私は諦めない。`,
+                    `こんな時だからこそ、${personality}な私らしく行動しよう。`,
+                    `${situation}...でも、仲間を信じている。`,
+                    `まさか${situation}とはね。でも、やるしかない。`,
+                    `${character.name}として、${situation}に立ち向かう！`
+                ]);
+            }, 1500);
+        });
+    }
+
+    copyDialogue(dialogue) {
+        navigator.clipboard.writeText(dialogue).then(() => {
+            alert('台詞をクリップボードにコピーしました');
+        }).catch(err => {
+            console.error('コピーに失敗しました:', err);
+        });
+    }
+
+    async checkConsistency() {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        // ローディング表示
+        const btn = document.getElementById('checkConsistencyBtn');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ チェック中...';
+
+        try {
+            // AI APIを呼び出す（ここではダミーチェックを実行）
+            const issues = await this.callConsistencyCheckAPI(currentWork);
+            
+            // 結果を表示
+            const resultBox = document.getElementById('consistencyResults');
+            const contentDiv = document.getElementById('consistencyResultsContent');
+            
+            if (resultBox && contentDiv) {
+                if (issues.length === 0) {
+                    contentDiv.innerHTML = `
+                        <div class="consistency-success">
+                            <p>✅ 明らかな矛盾は検出されませんでした。</p>
+                        </div>
+                    `;
+                } else {
+                    contentDiv.innerHTML = issues.map((issue, index) => `
+                        <div class="consistency-issue ${issue.severity}">
+                            <h5>${issue.severity === 'high' ? '⚠️' : 'ℹ️'} ${issue.title}</h5>
+                            <p>${issue.description}</p>
+                            ${issue.locations ? `<p class="issue-location">場所: ${issue.locations.join(', ')}</p>` : ''}
+                        </div>
+                    `).join('');
+                }
+                resultBox.style.display = 'block';
+            }
+        } catch (error) {
+            alert('矛盾チェック中にエラーが発生しました: ' + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    async callConsistencyCheckAPI(work) {
+        // 実際のAI API呼び出しに置き換えられます
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const chapters = this.plotManager.getChaptersByWorkId(work.id);
+                const characters = this.characterManager.getCharactersByWorkId(work.id);
+                
+                const issues = [];
+
+                // ダミーチェック: キャラクター設定の確認
+                if (characters.length > 0) {
+                    const incompleteChars = characters.filter(c => !c.personality || !c.background);
+                    if (incompleteChars.length > 0) {
+                        issues.push({
+                            severity: 'low',
+                            title: 'キャラクター設定の不足',
+                            description: `${incompleteChars.map(c => c.name).join(', ')}の性格や背景設定が不足しています。`,
+                            locations: ['キャラクター管理画面']
+                        });
+                    }
+                }
+
+                // ダミーチェック: 章の進行確認
+                if (chapters.length > 3) {
+                    const inProgressChapters = chapters.filter(c => c.status === 'in-progress');
+                    if (inProgressChapters.length > 2) {
+                        issues.push({
+                            severity: 'low',
+                            title: '同時執筆中の章が多い',
+                            description: `${inProgressChapters.length}つの章が同時に執筆中です。集中して完成させることをお勧めします。`,
+                            locations: chapters.map(c => c.title)
+                        });
+                    }
+                }
+
+                resolve(issues);
+            }, 2000);
+        });
+    }
+
+    // ==========================
+    // コラボレーション機能
+    // ==========================
+
+    initializeCollaborationFeatures() {
+        // 作品共有関連
+        const shareWorkSelect = document.getElementById('shareWorkSelect');
+        if (shareWorkSelect) {
+            this.updateShareWorkSelect();
+        }
+
+        const generateShareLinkBtn = document.getElementById('generateShareLinkBtn');
+        if (generateShareLinkBtn) {
+            generateShareLinkBtn.addEventListener('click', () => this.generateShareLink());
+        }
+
+        const exportWorkBtn = document.getElementById('exportWorkBtn');
+        if (exportWorkBtn) {
+            exportWorkBtn.addEventListener('click', () => this.exportWork());
+        }
+
+        const importSharedWorkBtn = document.getElementById('importSharedWorkBtn');
+        if (importSharedWorkBtn) {
+            importSharedWorkBtn.addEventListener('click', () => {
+                document.getElementById('importSharedWorkInput').click();
+            });
+        }
+
+        const importSharedWorkInput = document.getElementById('importSharedWorkInput');
+        if (importSharedWorkInput) {
+            importSharedWorkInput.addEventListener('change', (e) => this.importSharedWork(e));
+        }
+
+        // コメント関連
+        const commentChapterSelect = document.getElementById('commentChapterSelect');
+        if (commentChapterSelect) {
+            commentChapterSelect.addEventListener('change', () => this.updateCommentSceneSelect());
+        }
+
+        const addCommentBtn = document.getElementById('addCommentBtn');
+        if (addCommentBtn) {
+            addCommentBtn.addEventListener('click', () => this.addComment());
+        }
+
+        // 変更履歴関連
+        const historyTypeFilter = document.getElementById('historyTypeFilter');
+        const historyActionFilter = document.getElementById('historyActionFilter');
+        
+        if (historyTypeFilter) {
+            historyTypeFilter.addEventListener('change', () => this.renderHistory());
+        }
+        
+        if (historyActionFilter) {
+            historyActionFilter.addEventListener('change', () => this.renderHistory());
+        }
+
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        if (clearHistoryBtn) {
+            clearHistoryBtn.addEventListener('click', () => this.clearHistory());
+        }
+    }
+
+    updateShareWorkSelect() {
+        const select = document.getElementById('shareWorkSelect');
+        if (!select) return;
+
+        const works = this.workManager.getAllWorks();
+        
+        select.innerHTML = '<option value="">-- 作品を選択 --</option>';
+        works.forEach(work => {
+            const option = document.createElement('option');
+            option.value = work.id;
+            option.textContent = work.title;
+            select.appendChild(option);
+        });
+    }
+
+    generateShareLink() {
+        const select = document.getElementById('shareWorkSelect');
+        if (!select) return;
+
+        const workId = select.value;
+        if (!workId) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const shareLink = this.collaborationManager.generateShareLink(workId);
+        
+        const resultBox = document.getElementById('shareLinkResult');
+        const linkInput = document.getElementById('shareLinkInput');
+        
+        if (resultBox && linkInput) {
+            linkInput.value = shareLink;
+            resultBox.style.display = 'block';
+        }
+    }
+
+    copyShareLink() {
+        const linkInput = document.getElementById('shareLinkInput');
+        if (!linkInput) return;
+
+        linkInput.select();
+        navigator.clipboard.writeText(linkInput.value).then(() => {
+            alert('共有リンクをクリップボードにコピーしました');
+        }).catch(err => {
+            console.error('コピーに失敗しました:', err);
+        });
+    }
+
+    exportWork() {
+        const select = document.getElementById('shareWorkSelect');
+        if (!select) return;
+
+        const workId = select.value;
+        if (!workId) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const workData = this.collaborationManager.exportWork(workId);
+        if (!workData) {
+            alert('作品データの取得に失敗しました');
+            return;
+        }
+
+        const blob = new Blob([JSON.stringify(workData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${workData.work.title}_export.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        alert('作品をエクスポートしました');
+    }
+
+    importSharedWork(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                const newWorkId = this.collaborationManager.importSharedWork(data);
+                
+                this.renderWorkList();
+                alert('作品をインポートしました！');
+                
+                // インポートした作品を開く
+                this.workManager.setCurrentWork(newWorkId);
+                this.openWork(newWorkId);
+            } catch (error) {
+                alert('インポートに失敗しました: ' + error.message);
+            }
+        };
+        reader.readAsText(file);
+
+        // ファイル選択をリセット
+        event.target.value = '';
+    }
+
+    updateCommentSceneSelect() {
+        const chapterSelect = document.getElementById('commentChapterSelect');
+        const sceneSelect = document.getElementById('commentSceneSelect');
+        
+        if (!chapterSelect || !sceneSelect) return;
+
+        const chapterId = chapterSelect.value;
+        
+        sceneSelect.innerHTML = '<option value="">-- 全体コメント --</option>';
+        
+        if (chapterId) {
+            const scenes = this.plotManager.getScenesByChapterId(chapterId);
+            scenes.forEach(scene => {
+                const option = document.createElement('option');
+                option.value = scene.id;
+                option.textContent = scene.title;
+                sceneSelect.appendChild(option);
+            });
+        }
+    }
+
+    updateCommentChapterSelect() {
+        const select = document.getElementById('commentChapterSelect');
+        if (!select) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            select.innerHTML = '<option value="">-- 章を選択 --</option>';
+            return;
+        }
+
+        const chapters = this.plotManager.getChaptersByWorkId(currentWork.id);
+        
+        select.innerHTML = '<option value="">-- 章を選択 --</option>';
+        chapters.forEach(chapter => {
+            const option = document.createElement('option');
+            option.value = chapter.id;
+            option.textContent = chapter.title;
+            select.appendChild(option);
+        });
+    }
+
+    addComment() {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const chapterSelect = document.getElementById('commentChapterSelect');
+        const sceneSelect = document.getElementById('commentSceneSelect');
+        const textInput = document.getElementById('commentText');
+        const authorInput = document.getElementById('commentAuthor');
+
+        if (!chapterSelect || !textInput) return;
+
+        const chapterId = chapterSelect.value;
+        const sceneId = sceneSelect ? sceneSelect.value : null;
+        const text = textInput.value.trim();
+        const author = authorInput ? authorInput.value.trim() : '';
+
+        if (!chapterId) {
+            alert('章を選択してください');
+            return;
+        }
+
+        if (!text) {
+            alert('コメントを入力してください');
+            return;
+        }
+
+        this.collaborationManager.addComment(currentWork.id, chapterId, sceneId, text, author);
+        
+        // フォームをクリア
+        textInput.value = '';
+        if (authorInput) authorInput.value = '';
+        
+        // コメント一覧を更新
+        this.renderComments();
+        
+        alert('コメントを追加しました');
+    }
+
+    renderComments() {
+        const container = document.getElementById('commentsView');
+        if (!container) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            container.innerHTML = '<div class="empty-message">作品を選択してください</div>';
+            return;
+        }
+
+        const comments = this.collaborationManager.getComments(currentWork.id);
+
+        if (comments.length === 0) {
+            container.innerHTML = '<div class="empty-message">コメントがまだありません</div>';
+            return;
+        }
+
+        let html = '';
+        comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(comment => {
+            const chapter = this.plotManager.getChapter(comment.chapterId);
+            const chapterTitle = chapter ? chapter.title : '不明な章';
+            
+            let targetInfo = chapterTitle;
+            if (comment.sceneId) {
+                const scene = this.plotManager.getScene(comment.sceneId);
+                targetInfo += ` > ${scene ? scene.title : '不明なシーン'}`;
+            }
+
+            html += `
+                <div class="comment-item ${comment.resolved ? 'resolved' : ''}">
+                    <div class="comment-header">
+                        <span class="comment-author">${comment.author}</span>
+                        <span class="comment-target">${targetInfo}</span>
+                        <span class="comment-time">${this.collaborationManager.formatTimestamp(comment.createdAt)}</span>
+                    </div>
+                    <div class="comment-text">${comment.text}</div>
+                    <div class="comment-actions">
+                        ${!comment.resolved ? `
+                            <button class="btn btn-success btn-sm" onclick="app.resolveComment('${comment.id}')">
+                                ✓ 解決済み
+                            </button>
+                        ` : '<span class="resolved-badge">✓ 解決済み</span>'}
+                        <button class="btn btn-danger btn-sm" onclick="app.deleteComment('${comment.id}')">
+                            削除
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    resolveComment(commentId) {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) return;
+
+        this.collaborationManager.resolveComment(currentWork.id, commentId);
+        this.renderComments();
+    }
+
+    deleteComment(commentId) {
+        if (!confirm('このコメントを削除しますか？')) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) return;
+
+        this.collaborationManager.deleteComment(currentWork.id, commentId);
+        this.renderComments();
+    }
+
+    recordChange(type, action, targetId, targetName, details) {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) return;
+
+        this.collaborationManager.recordChange(currentWork.id, type, action, targetId, targetName, details);
+    }
+
+    renderHistory() {
+        const container = document.getElementById('historyView');
+        if (!container) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            container.innerHTML = '<div class="empty-message">作品を選択してください</div>';
+            return;
+        }
+
+        const typeFilter = document.getElementById('historyTypeFilter')?.value || '';
+        const actionFilter = document.getElementById('historyActionFilter')?.value || '';
+
+        const history = this.collaborationManager.getFilteredHistory(currentWork.id, typeFilter, actionFilter);
+
+        if (history.length === 0) {
+            container.innerHTML = '<div class="empty-message">変更履歴がありません</div>';
+            return;
+        }
+
+        const actionLabels = {
+            'create': '作成',
+            'update': '更新',
+            'delete': '削除'
+        };
+
+        const typeLabels = {
+            'chapter': '章',
+            'scene': 'シーン',
+            'character': 'キャラクター'
+        };
+
+        let html = '';
+        history.forEach(change => {
+            const actionLabel = actionLabels[change.action] || change.action;
+            const typeLabel = typeLabels[change.type] || change.type;
+
+            html += `
+                <div class="history-item action-${change.action}">
+                    <div class="history-header">
+                        <span class="history-action">${actionLabel}</span>
+                        <span class="history-type">${typeLabel}</span>
+                        <span class="history-time">${this.collaborationManager.formatTimestamp(change.timestamp)}</span>
+                    </div>
+                    <div class="history-detail">
+                        <strong>${change.targetName}</strong>
+                        ${change.details && Object.keys(change.details).length > 0 ? 
+                            `<div class="history-changes">${JSON.stringify(change.details)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    clearHistory() {
+        if (!confirm('すべての変更履歴を削除しますか？この操作は取り消せません。')) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) return;
+
+        this.collaborationManager.clearHistory(currentWork.id);
+        this.renderHistory();
+        
+        alert('変更履歴をクリアしました');
+    }
+
+    // ==========================
+    // 出力・公開機能
+    // ==========================
+
+    initializeOutputFeatures() {
+        // 作品選択肢を更新
+        this.updateOutputWorkSelect();
+        this.updateStatsWorkSelect();
+
+        // PDF出力ボタン
+        const generatePDFBtn = document.getElementById('generatePDFBtn');
+        if (generatePDFBtn) {
+            generatePDFBtn.addEventListener('click', () => this.generatePDF());
+        }
+
+        // HTML出力ボタン
+        const generateHTMLBtn = document.getElementById('generateHTMLBtn');
+        if (generateHTMLBtn) {
+            generateHTMLBtn.addEventListener('click', () => this.generateHTML());
+        }
+
+        // プレビューボタン
+        const previewWorkBtn = document.getElementById('previewWorkBtn');
+        if (previewWorkBtn) {
+            previewWorkBtn.addEventListener('click', () => this.previewWork());
+        }
+
+        // 統計グラフ表示ボタン
+        const showStatsBtn = document.getElementById('showStatsBtn');
+        if (showStatsBtn) {
+            showStatsBtn.addEventListener('click', () => this.showStatistics());
+        }
+    }
+
+    updateOutputWorkSelect() {
+        const select = document.getElementById('outputWorkSelect');
+        if (!select) return;
+
+        const works = this.workManager.getAllWorks();
+        
+        select.innerHTML = '<option value="">-- 作品を選択 --</option>';
+        works.forEach(work => {
+            const option = document.createElement('option');
+            option.value = work.id;
+            option.textContent = work.title;
+            select.appendChild(option);
+        });
+    }
+
+    updateStatsWorkSelect() {
+        const select = document.getElementById('statsWorkSelect');
+        if (!select) return;
+
+        const works = this.workManager.getAllWorks();
+        
+        select.innerHTML = '<option value="">-- 作品を選択 --</option>';
+        works.forEach(work => {
+            const option = document.createElement('option');
+            option.value = work.id;
+            option.textContent = work.title;
+            select.appendChild(option);
+        });
+    }
+
+    getOutputOptions() {
+        return {
+            includeCharacters: document.getElementById('includeCharacters')?.checked || false,
+            includeImages: document.getElementById('includeImages')?.checked || false,
+            includeAnalytics: document.getElementById('includeAnalytics')?.checked || false
+        };
+    }
+
+    async generatePDF() {
+        const select = document.getElementById('outputWorkSelect');
+        if (!select) return;
+
+        const workId = select.value;
+        if (!workId) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const options = this.getOutputOptions();
+
+        try {
+            await this.outputManager.generatePDF(workId, options);
+            alert('PDFを生成しました（テキスト形式）');
+        } catch (error) {
+            alert('PDF生成中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    async generateHTML() {
+        const select = document.getElementById('outputWorkSelect');
+        if (!select) return;
+
+        const workId = select.value;
+        if (!workId) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const options = this.getOutputOptions();
+
+        try {
+            await this.outputManager.generateHTML(workId, options);
+            alert('HTML公開用ファイルを生成しました');
+        } catch (error) {
+            alert('HTML生成中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    previewWork() {
+        const select = document.getElementById('outputWorkSelect');
+        if (!select) return;
+
+        const workId = select.value;
+        if (!workId) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const options = this.getOutputOptions();
+
+        try {
+            this.outputManager.previewWork(workId, options);
+        } catch (error) {
+            alert('プレビュー表示中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    showStatistics() {
+        const select = document.getElementById('statsWorkSelect');
+        if (!select) return;
+
+        const workId = select.value;
+        if (!workId) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const graphsContainer = document.getElementById('statsGraphs');
+        if (!graphsContainer) return;
+
+        try {
+            this.outputManager.renderStatisticsGraphs(workId);
+            graphsContainer.style.display = 'block';
+        } catch (error) {
+            alert('統計グラフ表示中にエラーが発生しました: ' + error.message);
+            console.error(error);
+        }
+    }
+
+    // ==========================
+    // テンプレート機能
+    // ==========================
+
+    initializeTemplateFeatures() {
+        // キャラクターテンプレート選択肢を更新
+        this.updateCharacterTemplateSelect();
+        this.updateChapterTemplateWorkSelect();
+
+        // キャラクターテンプレート保存ボタン
+        const saveCharTmplBtn = document.getElementById('saveCharacterTemplateBtn');
+        if (saveCharTmplBtn) {
+            saveCharTmplBtn.addEventListener('click', () => this.saveCharacterTemplate());
+        }
+
+        // キャラクターテンプレート読み込みボタン
+        const loadCharTmplBtn = document.getElementById('loadCharacterTemplateBtn');
+        if (loadCharTmplBtn) {
+            loadCharTmplBtn.addEventListener('click', () => this.loadCharacterTemplate());
+        }
+
+        // 章テンプレート保存ボタン
+        const saveChapTmplBtn = document.getElementById('saveChapterTemplateBtn');
+        if (saveChapTmplBtn) {
+            saveChapTmplBtn.addEventListener('click', () => this.saveChapterTemplate());
+        }
+
+        // 章テンプレート読み込みボタン
+        const loadChapTmplBtn = document.getElementById('loadChapterTemplateBtn');
+        if (loadChapTmplBtn) {
+            loadChapTmplBtn.addEventListener('click', () => this.loadChapterTemplate());
+        }
+
+        // テンプレート一覧を表示
+        this.renderCharacterTemplates();
+        this.renderChapterTemplates();
+    }
+
+    updateCharacterTemplateSelect() {
+        const select = document.getElementById('characterTemplateSelect');
+        if (!select) return;
+
+        const characters = this.characterManager.getAllCharacters();
+        
+        select.innerHTML = '<option value="">-- キャラクターを選択 --</option>';
+        characters.forEach(char => {
+            const option = document.createElement('option');
+            option.value = char.id;
+            option.textContent = char.name;
+            select.appendChild(option);
+        });
+    }
+
+    updateChapterTemplateWorkSelect() {
+        const select = document.getElementById('chapterTemplateWork');
+        if (!select) return;
+
+        const works = this.workManager.getAllWorks();
+        
+        select.innerHTML = '<option value="">-- 作品を選択 --</option>';
+        works.forEach(work => {
+            const option = document.createElement('option');
+            option.value = work.id;
+            option.textContent = work.title;
+            select.appendChild(option);
+        });
+    }
+
+    saveCharacterTemplate() {
+        const select = document.getElementById('characterTemplateSelect');
+        if (!select) return;
+
+        const characterId = select.value;
+        if (!characterId) {
+            alert('キャラクターを選択してください');
+            return;
+        }
+
+        const character = this.characterManager.getCharacter(characterId);
+        if (!character) return;
+
+        const templateName = prompt('テンプレート名を入力してください:', character.name + 'テンプレート');
+        if (!templateName) return;
+
+        try {
+            this.templateManager.saveCharacterTemplate(character, templateName);
+            alert('テンプレートを保存しました');
+            this.renderCharacterTemplates();
+        } catch (error) {
+            alert('テンプレート保存中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    loadCharacterTemplate() {
+        const templates = this.templateManager.getCharacterTemplates();
+        if (templates.length === 0) {
+            alert('保存されているテンプレートがありません');
+            return;
+        }
+
+        // テンプレート選択ダイアログ（簡易版）
+        const templateNames = templates.map((t, i) => `${i + 1}. ${t.name}`).join('\\n');
+        const input = prompt(`テンプレートを選択してください:\\n${templateNames}\\n\\n番号を入力:`);
+        
+        if (!input) return;
+        
+        const index = parseInt(input) - 1;
+        if (index < 0 || index >= templates.length) {
+            alert('無効な番号です');
+            return;
+        }
+
+        const template = templates[index];
+        const newName = prompt('新しいキャラクター名を入力してください:', template.name.replace('テンプレート', ''));
+        if (!newName) return;
+
+        try {
+            const newCharacter = this.templateManager.applyCharacterTemplate(template.id, newName);
+            this.characterManager.addCharacter(newCharacter);
+            this.renderCharacterList();
+            alert('テンプレートからキャラクターを作成しました');
+        } catch (error) {
+            alert('テンプレート適用中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    renderCharacterTemplates() {
+        const container = document.getElementById('characterTemplates');
+        if (!container) return;
+
+        const templates = this.templateManager.getCharacterTemplates();
+        
+        if (templates.length === 0) {
+            container.innerHTML = '<p class="empty-message">保存されているテンプレートがありません</p>';
+            return;
+        }
+
+        let html = '';
+        templates.forEach(template => {
+            html += `
+                <div class="template-item">
+                    <span class="template-name">${template.name}</span>
+                    <span class="template-date">${new Date(template.createdAt).toLocaleDateString('ja-JP')}</span>
+                    <button class="btn btn-danger btn-sm" onclick="app.deleteCharacterTemplate('${template.id}')">
+                        削除
+                    </button>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    deleteCharacterTemplate(templateId) {
+        if (!confirm('このテンプレートを削除しますか？')) return;
+
+        this.templateManager.deleteCharacterTemplate(templateId);
+        this.renderCharacterTemplates();
+        alert('テンプレートを削除しました');
+    }
+
+    saveChapterTemplate() {
+        const select = document.getElementById('chapterTemplateWork');
+        if (!select) return;
+
+        const workId = select.value;
+        if (!workId) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const templateName = prompt('テンプレート名を入力してください:', '章構成テンプレート');
+        if (!templateName) return;
+
+        try {
+            this.templateManager.saveChapterTemplate(workId, templateName);
+            alert('章構成テンプレートを保存しました');
+            this.renderChapterTemplates();
+        } catch (error) {
+            alert('テンプレート保存中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    loadChapterTemplate() {
+        const templates = this.templateManager.getChapterTemplates();
+        if (templates.length === 0) {
+            alert('保存されているテンプレートがありません');
+            return;
+        }
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        // テンプレート選択ダイアログ
+        const templateNames = templates.map((t, i) => `${i + 1}. ${t.name} (${t.data.length}章)`).join('\\n');
+        const input = prompt(`テンプレートを選択してください:\\n${templateNames}\\n\\n番号を入力:`);
+        
+        if (!input) return;
+        
+        const index = parseInt(input) - 1;
+        if (index < 0 || index >= templates.length) {
+            alert('無効な番号です');
+            return;
+        }
+
+        const template = templates[index];
+
+        try {
+            this.templateManager.applyChapterTemplate(template.id, currentWork.id);
+            this.renderChapterList();
+            alert('章構成テンプレートを適用しました');
+        } catch (error) {
+            alert('テンプレート適用中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    renderChapterTemplates() {
+        const container = document.getElementById('chapterTemplates');
+        if (!container) return;
+
+        const templates = this.templateManager.getChapterTemplates();
+        
+        if (templates.length === 0) {
+            container.innerHTML = '<p class="empty-message">保存されているテンプレートがありません</p>';
+            return;
+        }
+
+        let html = '';
+        templates.forEach(template => {
+            html += `
+                <div class="template-item">
+                    <span class="template-name">${template.name} (${template.data.length}章)</span>
+                    <span class="template-date">${new Date(template.createdAt).toLocaleDateString('ja-JP')}</span>
+                    <button class="btn btn-danger btn-sm" onclick="app.deleteChapterTemplate('${template.id}')">
+                        削除
+                    </button>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    deleteChapterTemplate(templateId) {
+        if (!confirm('このテンプレートを削除しますか？')) return;
+
+        this.templateManager.deleteChapterTemplate(templateId);
+        this.renderChapterTemplates();
+        alert('テンプレートを削除しました');
+    }
+
+    // ==========================
+    // ワールドマップ機能
+    // ==========================
+
+    initializeWorldMapFeatures() {
+        // 場所追加ボタン
+        const addLocationBtn = document.getElementById('addLocationBtn');
+        if (addLocationBtn) {
+            addLocationBtn.addEventListener('click', () => this.addLocation());
+        }
+
+        // フィルター
+        const locationTypeFilter = document.getElementById('locationTypeFilter');
+        if (locationTypeFilter) {
+            locationTypeFilter.addEventListener('change', () => this.renderLocations());
+        }
+
+        const locationSearchInput = document.getElementById('locationSearchInput');
+        if (locationSearchInput) {
+            locationSearchInput.addEventListener('input', () => this.renderLocations());
+        }
+
+        // 場所一覧を表示
+        this.renderLocations();
+    }
+
+    addLocation() {
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            alert('作品を選択してください');
+            return;
+        }
+
+        const name = prompt('場所の名前を入力してください:');
+        if (!name) return;
+
+        const types = ['city', 'dungeon', 'nature', 'building', 'other'];
+        const typeLabels = ['都市', 'ダンジョン', '自然', '建物', 'その他'];
+        const typeInput = prompt(`タイプを選択してください:\\n${typeLabels.map((l, i) => `${i + 1}. ${l}`).join('\\n')}\\n\\n番号を入力:`);
+        
+        const typeIndex = parseInt(typeInput) - 1;
+        const type = (typeIndex >= 0 && typeIndex < types.length) ? types[typeIndex] : 'other';
+
+        const description = prompt('説明を入力してください（任意）:', '');
+
+        try {
+            const location = {
+                workId: currentWork.id,
+                name: name,
+                type: type,
+                description: description || ''
+            };
+
+            this.worldMapManager.addLocation(location);
+            this.renderLocations();
+            alert('場所を追加しました');
+        } catch (error) {
+            alert('場所追加中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    renderLocations() {
+        const container = document.getElementById('locationsList');
+        if (!container) return;
+
+        const currentWork = this.workManager.getCurrentWork();
+        if (!currentWork) {
+            container.innerHTML = '<div class="empty-message">作品を選択してください</div>';
+            return;
+        }
+
+        const typeFilter = document.getElementById('locationTypeFilter')?.value || '';
+        const searchQuery = document.getElementById('locationSearchInput')?.value || '';
+
+        let locations = this.worldMapManager.getLocationsByWorkId(currentWork.id);
+
+        // フィルター適用
+        if (typeFilter) {
+            locations = locations.filter(l => l.type === typeFilter);
+        }
+
+        if (searchQuery) {
+            locations = this.worldMapManager.searchLocations(currentWork.id, searchQuery);
+            if (typeFilter) {
+                locations = locations.filter(l => l.type === typeFilter);
+            }
+        }
+
+        if (locations.length === 0) {
+            container.innerHTML = '<div class="empty-message">場所が登録されていません</div>';
+            return;
+        }
+
+        const typeLabels = {
+            'city': '🏙️ 都市',
+            'dungeon': '🏰 ダンジョン',
+            'nature': '🌲 自然',
+            'building': '🏛️ 建物',
+            'other': '📍 その他'
+        };
+
+        let html = '';
+        locations.forEach(location => {
+            const connectedCount = location.connectedTo.length;
+            
+            html += `
+                <div class="location-card">
+                    <div class="location-header">
+                        <h4>${location.name}</h4>
+                        <span class="location-type">${typeLabels[location.type] || location.type}</span>
+                    </div>
+                    <div class="location-body">
+                        ${location.description ? `<p>${location.description}</p>` : ''}
+                        <p class="location-connections">接続: ${connectedCount}箇所</p>
+                    </div>
+                    <div class="location-actions">
+                        <button class="btn btn-primary btn-sm" onclick="app.editLocation('${location.id}')">
+                            編集
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="app.deleteLocation('${location.id}')">
+                            削除
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    editLocation(locationId) {
+        const location = this.worldMapManager.getLocation(locationId);
+        if (!location) return;
+
+        const newName = prompt('場所の名前:', location.name);
+        if (!newName) return;
+
+        const newDescription = prompt('説明:', location.description);
+
+        try {
+            this.worldMapManager.updateLocation(locationId, {
+                name: newName,
+                description: newDescription || ''
+            });
+            this.renderLocations();
+            alert('場所を更新しました');
+        } catch (error) {
+            alert('更新中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    deleteLocation(locationId) {
+        if (!confirm('この場所を削除しますか？')) return;
+
+        try {
+            this.worldMapManager.deleteLocation(locationId);
+            this.renderLocations();
+            alert('場所を削除しました');
+        } catch (error) {
+            alert('削除中にエラーが発生しました: ' + error.message);
+        }
     }
 
     // シーン管理

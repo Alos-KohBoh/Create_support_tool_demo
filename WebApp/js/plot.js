@@ -1,6 +1,6 @@
 // プロットクラス
 class Chapter {
-    constructor(id, title, order, description = '', status = 'not-started', workId = null) {
+    constructor(id, title, order, description = '', status = 'not-started', workId = null, tags = []) {
         this.id = id;
         this.workId = workId; // 作品ID
         this.title = title;
@@ -8,11 +8,12 @@ class Chapter {
         this.description = description;
         this.status = status; // 'not-started', 'in-progress', 'completed'
         this.scenes = [];
+        this.tags = tags || []; // タグ配列
     }
 }
 
 class Scene {
-    constructor(id, chapterId, title, order, content = '', characters = [], location = '', timeOfDay = '', workId = null) {
+    constructor(id, chapterId, title, order, content = '', characters = [], location = '', timeOfDay = '', workId = null, tags = []) {
         this.id = id;
         this.workId = workId; // 作品ID
         this.chapterId = chapterId;
@@ -23,11 +24,12 @@ class Scene {
         this.location = location;
         this.timeOfDay = timeOfDay;
         this.notes = '';
+        this.tags = tags || []; // タグ配列
     }
 }
 
 class TimelineEvent {
-    constructor(id, title, timestamp, description = '', relatedScenes = [], relatedCharacters = [], workId = null) {
+    constructor(id, title, timestamp, description = '', relatedScenes = [], relatedCharacters = [], workId = null, tags = []) {
         this.id = id;
         this.workId = workId; // 作品ID
         this.title = title;
@@ -35,6 +37,7 @@ class TimelineEvent {
         this.description = description;
         this.relatedScenes = relatedScenes; // Array of scene IDs
         this.relatedCharacters = relatedCharacters; // Array of character IDs
+        this.tags = tags || []; // タグ配列
     }
 }
 

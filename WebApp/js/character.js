@@ -1,13 +1,14 @@
 // キャラクタークラス
 class Character {
     constructor(id, name, job = '', race = '', element = '', level = 1, 
-                stats = {}, personality = '', background = '', dialogues = [], skills = [], imageUrl = '', bagItems = {}) {
+                stats = {}, personality = '', background = '', dialogues = [], skills = [], imageUrl = '', bagItems = {}, tags = [], exp = 0, levelHistory = []) {
         this.id = id;
         this.name = name;
         this.job = job;
         this.race = race;
         this.element = element;
         this.level = level;
+        this.exp = exp || 0; // 現在の経験値
         this.stats = stats; // 動的ステータス {statId: value}
         this.personality = personality;
         this.background = background;
@@ -15,6 +16,47 @@ class Character {
         this.skills = skills; // Array of strings
         this.imageUrl = imageUrl;
         this.bagItems = bagItems; // { itemName: quantity } キャラクター専用鞄
+        this.tags = tags || []; // タグ配列
+        this.levelHistory = levelHistory || []; // レベルアップ履歴 [{level, stats, timestamp}]
+    }
+
+    // 経験値を追加してレベルアップをチェック
+    addExp(amount) {
+        this.exp += amount;
+        const requiredExp = this.getRequiredExpForNextLevel();
+        
+        if (this.exp >= requiredExp) {
+            this.levelUp();
+            return true; // レベルアップした
+        }
+        return false; // レベルアップしなかった
+    }
+
+    // 次のレベルに必要な経験値を計算
+    getRequiredExpForNextLevel() {
+        // 基本式: 100 * (level ^ 1.5)
+        return Math.floor(100 * Math.pow(this.level, 1.5));
+    }
+
+    // レベルアップ処理
+    levelUp() {
+        const oldStats = { ...this.stats };
+        this.level++;
+        this.exp = 0; // 経験値リセット（余剰分は破棄）
+        
+        // レベルアップ履歴を記録
+        this.levelHistory.push({
+            level: this.level,
+            oldStats: oldStats,
+            newStats: { ...this.stats },
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    // 経験値の進捗率を取得（0-100）
+    getExpProgress() {
+        const required = this.getRequiredExpForNextLevel();
+        return Math.floor((this.exp / required) * 100);
     }
 
     // LocalStorageから読み込み用
@@ -28,7 +70,10 @@ class Character {
             c.stats || {},
             c.personality || '', c.background || '', c.dialogues || [], c.skills || [],
             c.imageUrl || '',
-            c.bagItems || {}
+            c.bagItems || {},
+            c.tags || [],
+            c.exp || 0,
+            c.levelHistory || []
         ));
     }
 
@@ -112,5 +157,78 @@ class CharacterManager {
 
     generateId() {
         return 'char_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+}
+
+// キャラクター関係性クラス
+class CharacterRelationship {
+    constructor(id, characterId1, characterId2, relationshipType = '', strength = 50, description = '') {
+        this.id = id;
+        this.characterId1 = characterId1; // 関係の主体
+        this.characterId2 = characterId2; // 関係の対象
+        this.relationshipType = relationshipType; // '友人', '恋人', '敵対', '家族', 'ライバル' など
+        this.strength = strength; // 関係の強さ 0-100
+        this.description = description; // 関係の詳細説明
+    }
+}
+
+// 関係性管理クラス
+class RelationshipManager {
+    constructor() {
+        this.relationships = this.loadRelationships();
+    }
+
+    loadRelationships() {
+        const saved = localStorage.getItem('character_relationships');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    saveRelationships() {
+        localStorage.setItem('character_relationships', JSON.stringify(this.relationships));
+    }
+
+    addRelationship(relationship) {
+        this.relationships.push(relationship);
+        this.saveRelationships();
+    }
+
+    updateRelationship(id, updatedData) {
+        const index = this.relationships.findIndex(r => r.id === id);
+        if (index !== -1) {
+            this.relationships[index] = { ...this.relationships[index], ...updatedData };
+            this.saveRelationships();
+        }
+    }
+
+    deleteRelationship(id) {
+        this.relationships = this.relationships.filter(r => r.id !== id);
+        this.saveRelationships();
+    }
+
+    getRelationship(id) {
+        return this.relationships.find(r => r.id === id);
+    }
+
+    // 特定キャラクターの関係性を取得
+    getRelationshipsForCharacter(characterId) {
+        return this.relationships.filter(r => 
+            r.characterId1 === characterId || r.characterId2 === characterId
+        );
+    }
+
+    // 2人のキャラクター間の関係性を取得
+    getRelationshipBetween(characterId1, characterId2) {
+        return this.relationships.find(r =>
+            (r.characterId1 === characterId1 && r.characterId2 === characterId2) ||
+            (r.characterId1 === characterId2 && r.characterId2 === characterId1)
+        );
+    }
+
+    getAllRelationships() {
+        return this.relationships;
+    }
+
+    generateId() {
+        return 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
 }

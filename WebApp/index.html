@@ -243,11 +243,27 @@
                         <select id="characterRaceFilter" class="filter-select">
                             <option value="">種族: すべて</option>
                         </select>
+                        <select id="characterTagFilter" class="filter-select">
+                            <option value="">タグ: すべて</option>
+                        </select>
                         <button id="clearCharacterFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
                     </div>
 
                     <div id="characterListView" class="data-list-view">
                         <div class="empty-message">キャラクターが登録されていません</div>
+                    </div>
+
+                    <!-- 関係性マップセクション -->
+                    <div class="relationship-section" style="margin-top: 30px;">
+                        <div class="list-header">
+                            <h2>キャラクター関係性マップ</h2>
+                            <button id="addRelationshipBtn" class="btn btn-success">
+                                関係性を追加
+                            </button>
+                        </div>
+                        <div id="relationshipListView" class="data-list-view">
+                            <div class="empty-message">関係性が登録されていません</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -448,7 +464,73 @@
                     <h2>システム</h2>
                     
                     <div class="system-section">
-                        <h3>データバックアップ</h3>
+                        <h3>プロジェクト管理</h3>
+                        <div class="form-group">
+                            <label for="currentProjectSelect">現在のプロジェクト</label>
+                            <select id="currentProjectSelect" class="form-control">
+                            </select>
+                        </div>
+                        <div class="button-group">
+                            <button id="newProjectBtn" class="btn btn-primary">
+                                ➕ 新しいプロジェクト
+                            </button>
+                            <button id="editProjectBtn" class="btn btn-secondary">
+                                ✏️ プロジェクト編集
+                            </button>
+                            <button id="deleteProjectBtn" class="btn btn-danger">
+                                🗑️ プロジェクト削除
+                            </button>
+                            <button id="exportProjectBtn" class="btn btn-info">
+                                📤 プロジェクトをエクスポート
+                            </button>
+                            <button id="importProjectBtn" class="btn btn-info">
+                                📥 プロジェクトをインポート
+                            </button>
+                        </div>
+                        <input type="file" id="importProjectInput" accept=".json" style="display: none;">
+                        <div id="projectInfo" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                            <p id="projectInfoText">プロジェクト情報を読み込み中...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="system-section">
+                        <h3>自動バックアップ</h3>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="autoBackupEnabled" checked>
+                                自動バックアップを有効にする
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="autoBackupInterval">バックアップ間隔（分）</label>
+                            <input type="number" id="autoBackupInterval" class="form-control" value="30" min="5" max="1440" style="width: 150px;">
+                        </div>
+                        <button id="saveBackupSettings" class="btn btn-primary">設定を保存</button>
+                        <div id="backupInfo" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                            <p><strong>バックアップ情報：</strong></p>
+                            <p id="backupInfoText">読み込み中...</p>
+                        </div>
+                    </div>
+
+                    <div class="system-section">
+                        <h3>手動バックアップ</h3>
+                        <div class="button-group">
+                            <button id="createBackupBtn" class="btn btn-success">
+                                💾 バックアップを作成
+                            </button>
+                            <button id="restoreBackupBtn" class="btn btn-warning">
+                                📂 バックアップから復元
+                            </button>
+                        </div>
+                        <input type="file" id="restoreBackupInput" accept=".json" style="display: none;">
+                        <p class="help-text">
+                            バックアップ作成: すべてのデータをJSONファイルとしてダウンロード<br>
+                            バックアップ復元: JSONファイルからデータを完全復元
+                        </p>
+                    </div>
+                    
+                    <div class="system-section">
+                        <h3>データバックアップ（旧）</h3>
                         <div class="button-group">
                             <button id="exportDataBtn" class="btn btn-info">
                                 データをエクスポート
@@ -474,6 +556,170 @@
                         <p class="help-text">
                             すべてのデータを削除してサンプルデータを再読み込みします
                         </p>
+                    </div>
+
+                    <div class="system-section">
+                        <h3>🤝 作品共有機能</h3>
+                        <p class="help-text">
+                            作品データをエクスポートして他の人と共有できます。<br>
+                            共有リンクを生成してコラボレーターと作品を編集できます。
+                        </p>
+                        <div class="form-group">
+                            <label for="shareWorkSelect">共有する作品</label>
+                            <select id="shareWorkSelect" class="form-control">
+                                <option value="">-- 作品を選択 --</option>
+                            </select>
+                        </div>
+                        <div class="button-group">
+                            <button id="generateShareLinkBtn" class="btn btn-primary">
+                                🔗 共有リンクを生成
+                            </button>
+                            <button id="exportWorkBtn" class="btn btn-success">
+                                💾 作品をエクスポート
+                            </button>
+                            <button id="importSharedWorkBtn" class="btn btn-info">
+                                📥 共有作品をインポート
+                            </button>
+                        </div>
+                        <input type="file" id="importSharedWorkInput" accept=".json" style="display: none;">
+                        <div id="shareLinkResult" class="share-link-box" style="display: none;">
+                            <h4>共有リンク</h4>
+                            <div class="share-link-display">
+                                <input type="text" id="shareLinkInput" class="form-control" readonly>
+                                <button class="btn btn-secondary btn-sm" onclick="app.copyShareLink()">📋 コピー</button>
+                            </div>
+                            <p class="help-text">このリンクをコラボレーターと共有してください。</p>
+                        </div>
+                    </div>
+
+                    <div class="system-section">
+                        <h3>📝 出力・公開機能</h3>
+                        <p class="help-text">
+                            作品を様々な形式で出力して、公開や印刷ができます。
+                        </p>
+                        <div class="form-group">
+                            <label for="outputWorkSelect">出力する作品</label>
+                            <select id="outputWorkSelect" class="form-control">
+                                <option value="">-- 作品を選択 --</option>
+                            </select>
+                        </div>
+                        <div class="button-group">
+                            <button id="generatePDFBtn" class="btn btn-danger">
+                                📝 PDF出力
+                            </button>
+                            <button id="generateHTMLBtn" class="btn btn-success">
+                                🌐 HTML公開用ファイル生成
+                            </button>
+                            <button id="previewWorkBtn" class="btn btn-info">
+                                👁️ プレビュー
+                            </button>
+                        </div>
+                        <div id="outputOptions" class="output-options">
+                            <h4>出力オプション</h4>
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="includeCharacters" checked>
+                                    キャラクター情報を含める
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="includeImages" checked>
+                                    画像を含める
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="includeAnalytics">
+                                    統計情報を含める
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="system-section">
+                        <h3>📊 統計グラフ</h3>
+                        <p class="help-text">
+                            作品の統計データをグラフ化して視覚的に表示します。
+                        </p>
+                        <div class="form-group">
+                            <label for="statsWorkSelect">分析する作品</label>
+                            <select id="statsWorkSelect" class="form-control">
+                                <option value="">-- 作品を選択 --</option>
+                            </select>
+                        </div>
+                        <button id="showStatsBtn" class="btn btn-primary">
+                            📊 統計グラフを表示
+                        </button>
+                        <div id="statsGraphs" class="stats-graphs" style="display: none;">
+                            <div class="stats-grid">
+                                <div class="stats-card">
+                                    <h4>章別文字数</h4>
+                                    <canvas id="chapterWordsChart"></canvas>
+                                </div>
+                                <div class="stats-card">
+                                    <h4>キャラクター登場回数</h4>
+                                    <canvas id="characterAppearanceChart"></canvas>
+                                </div>
+                                <div class="stats-card">
+                                    <h4>執筆進捗状況</h4>
+                                    <canvas id="progressChart"></canvas>
+                                </div>
+                                <div class="stats-card">
+                                    <h4>章別シーン数</h4>
+                                    <canvas id="chapterScenesChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="system-section">
+                        <h3>📋 テンプレート管理</h3>
+                        <p class="help-text">
+                            よく使うキャラクター設定や章構成をテンプレートとして保存し、再利用できます。
+                        </p>
+                        
+                        <!-- キャラクターテンプレート -->
+                        <div class="template-section">
+                            <h4>キャラクターテンプレート</h4>
+                            <div class="form-group">
+                                <label for="characterTemplateSelect">キャラクターを選択</label>
+                                <select id="characterTemplateSelect" class="form-control">
+                                    <option value="">-- キャラクターを選択 --</option>
+                                </select>
+                            </div>
+                            <div class="button-group">
+                                <button id="saveCharacterTemplateBtn" class="btn btn-success">
+                                    💾 テンプレートとして保存
+                                </button>
+                                <button id="loadCharacterTemplateBtn" class="btn btn-info">
+                                    📂 テンプレートから作成
+                                </button>
+                            </div>
+                            <div id="characterTemplateList" class="template-list">
+                                <h5>保存済みテンプレート</h5>
+                                <div id="characterTemplates"></div>
+                            </div>
+                        </div>
+
+                        <!-- 章構成テンプレート -->
+                        <div class="template-section">
+                            <h4>章構成テンプレート</h4>
+                            <div class="form-group">
+                                <label for="chapterTemplateWork">作品を選択</label>
+                                <select id="chapterTemplateWork" class="form-control">
+                                    <option value="">-- 作品を選択 --</option>
+                                </select>
+                            </div>
+                            <div class="button-group">
+                                <button id="saveChapterTemplateBtn" class="btn btn-success">
+                                    💾 章構成をテンプレート化
+                                </button>
+                                <button id="loadChapterTemplateBtn" class="btn btn-info">
+                                    📂 テンプレートを適用
+                                </button>
+                            </div>
+                            <div id="chapterTemplateList" class="template-list">
+                                <h5>保存済みテンプレート</h5>
+                                <div id="chapterTemplates"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -523,7 +769,13 @@
                 <!-- タブメニュー -->
                 <div class="main-tabs">
                     <button class="main-tab-btn active" data-tab="chapters-content">章/エピソード</button>
+                    <button class="main-tab-btn" data-tab="scene-cards-content">シーンカード</button>
                     <button class="main-tab-btn" data-tab="timeline-content">タイムライン</button>
+                    <button class="main-tab-btn" data-tab="plot-analytics-content">分析</button>
+                    <button class="main-tab-btn" data-tab="ai-assistance-content">AI支援</button>
+                    <button class="main-tab-btn" data-tab="comments-content">コメント</button>
+                    <button class="main-tab-btn" data-tab="history-content">履歴</button>
+                    <button class="main-tab-btn" data-tab="worldmap-content">世界観</button>
                 </div>
 
                 <!-- 章管理タブ -->
@@ -538,6 +790,21 @@
                         
                         <div id="chapterListView" class="data-list-view">
                             <div class="empty-message">章が作成されていません</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- シーンカードタブ -->
+                <div id="scene-cards-content" class="main-tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="list-header">
+                            <h2>シーンカードビュー</h2>
+                            <select id="sceneCardChapterFilter" class="form-control" style="width: 250px;">
+                                <option value="">すべての章</option>
+                            </select>
+                        </div>
+                        <div id="sceneCardsView" class="scene-cards-container">
+                            <div class="empty-message">シーンが作成されていません</div>
                         </div>
                     </div>
                 </div>
@@ -557,9 +824,195 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- プロット分析タブ -->
+                <div id="plot-analytics-content" class="main-tab-content" style="display: none;">
+                    <div class="card">
+                        <h2>プロット分析</h2>
+                        <div id="plotAnalyticsView" class="analytics-container">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI支援タブ -->
+                <div id="ai-assistance-content" class="main-tab-content" style="display: none;">
+                    <div class="card">
+                        <h2>AI執筆支援</h2>
+                        
+                        <!-- プロット生成支援 -->
+                        <div class="ai-section">
+                            <h3>📖 プロット生成支援</h3>
+                            <p class="help-text">作品の設定を元に、AIがプロットのアイデアを提案します。</p>
+                            <div class="form-group">
+                                <label for="plotPrompt">プロット生成のヒント（オプション）</label>
+                                <textarea id="plotPrompt" class="form-control" rows="3" placeholder="例: 主人公が敵と和解するシーン、大きな転機となる出来事など"></textarea>
+                            </div>
+                            <button id="generatePlotBtn" class="btn btn-primary">
+                                💡 プロットアイデアを生成
+                            </button>
+                            <div id="plotSuggestions" class="ai-result-box" style="display: none;">
+                                <h4>生成されたプロット案</h4>
+                                <div id="plotSuggestionsContent"></div>
+                                <button class="btn btn-success btn-sm" onclick="app.addSuggestionAsChapter()">章として追加</button>
+                            </div>
+                        </div>
+
+                        <hr style="margin: 30px 0;">
+
+                        <!-- キャラクター台詞提案 -->
+                        <div class="ai-section">
+                            <h3>💬 キャラクター台詞提案</h3>
+                            <p class="help-text">キャラクターの性格に基づいた台詞のバリエーションを提案します。</p>
+                            <div class="form-group">
+                                <label for="dialogueCharacterSelect">キャラクター選択</label>
+                                <select id="dialogueCharacterSelect" class="form-control">
+                                    <option value="">-- キャラクターを選択 --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="dialogueSituation">状況・シチュエーション</label>
+                                <textarea id="dialogueSituation" class="form-control" rows="2" placeholder="例: 仲間を励ますシーン、敵に宣戦布告する場面など"></textarea>
+                            </div>
+                            <button id="generateDialogueBtn" class="btn btn-primary">
+                                💬 台詞案を生成
+                            </button>
+                            <div id="dialogueSuggestions" class="ai-result-box" style="display: none;">
+                                <h4>提案された台詞</h4>
+                                <div id="dialogueSuggestionsContent"></div>
+                            </div>
+                        </div>
+
+                        <hr style="margin: 30px 0;">
+
+                        <!-- 設定矛盾チェック -->
+                        <div class="ai-section">
+                            <h3>🔍 設定矛盾チェック</h3>
+                            <p class="help-text">作品内の設定やキャラクター描写に矛盾がないかAIがチェックします。</p>
+                            <button id="checkConsistencyBtn" class="btn btn-primary">
+                                🔍 矛盾をチェック
+                            </button>
+                            <div id="consistencyResults" class="ai-result-box" style="display: none;">
+                                <h4>チェック結果</h4>
+                                <div id="consistencyResultsContent"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
+                <!-- コメント・レビュータブ -->
+                <div id="comments-content" class="main-tab-content" style="display: none;">
+                    <div class="card">
+                        <h2>💬 コメント・レビュー</h2>
+                        
+                        <!-- コメント対象選択 -->
+                        <div class="form-group">
+                            <label for="commentChapterSelect">章を選択</label>
+                            <select id="commentChapterSelect" class="form-control">
+                                <option value="">-- 章を選択 --</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="commentSceneSelect">シーンを選択（オプション）</label>
+                            <select id="commentSceneSelect" class="form-control">
+                                <option value="">-- 全体コメント --</option>
+                            </select>
+                        </div>
+                        
+                        <!-- コメント入力 -->
+                        <div class="form-group">
+                            <label for="commentText">コメント</label>
+                            <textarea id="commentText" class="form-control" rows="4" placeholder="コメントやレビューを入力してください..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="commentAuthor">コメント者名</label>
+                            <input type="text" id="commentAuthor" class="form-control" placeholder="あなたの名前">
+                        </div>
+                        
+                        <button id="addCommentBtn" class="btn btn-primary">
+                            💬 コメントを追加
+                        </button>
+                        
+                        <!-- コメント一覧 -->
+                        <div id="commentsList" class="comments-list">
+                            <h3>コメント一覧</h3>
+                            <div id="commentsView" class="empty-message">
+                                コメントがまだありません
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 変更履歴タブ -->
+                <div id="history-content" class="main-tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="list-header">
+                            <h2>📜 変更履歴</h2>
+                            <button id="clearHistoryBtn" class="btn btn-danger btn-sm">
+                                履歴をクリア
+                            </button>
+                        </div>
+                        
+                        <!-- フィルター -->
+                        <div class="filter-bar">
+                            <select id="historyTypeFilter" class="filter-select">
+                                <option value="">すべての変更</option>
+                                <option value="chapter">章の変更</option>
+                                <option value="scene">シーンの変更</option>
+                                <option value="character">キャラクターの変更</option>
+                            </select>
+                            <select id="historyActionFilter" class="filter-select">
+                                <option value="">すべての操作</option>
+                                <option value="create">作成</option>
+                                <option value="update">更新</option>
+                                <option value="delete">削除</option>
+                            </select>
+                        </div>
+                        
+                        <!-- 履歴一覧 -->
+                        <div id="historyView" class="history-list">
+                            <div class="empty-message">変更履歴がありません</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ワールドマップタブ -->
+                <div id="worldmap-content" class="main-tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="list-header">
+                            <h2>🌎 世界観・地理管理</h2>
+                            <button id="addLocationBtn" class="btn btn-success">
+                                場所を追加
+                            </button>
+                        </div>
+
+                        <!-- フィルター -->
+                        <div class="filter-bar">
+                            <select id="locationTypeFilter" class="filter-select">
+                                <option value="">すべてのタイプ</option>
+                                <option value="city">都市</option>
+                                <option value="dungeon">ダンジョン</option>
+                                <option value="nature">自然</option>
+                                <option value="building">建物</option>
+                                <option value="other">その他</option>
+                            </select>
+                            <input type="text" id="locationSearchInput" class="filter-input" placeholder="場所名で検索...">
+                        </div>
+
+                        <!-- 地理関係図 -->
+                        <div class="worldmap-view">
+                            <div id="locationsList" class="locations-grid">
+                                <div class="empty-message">場所が登録されていません</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- キャラクター追加モーダル（新規） -->
@@ -630,6 +1083,11 @@
                 <div class="form-group">
                     <label for="characterSkills">スキル/特技 (改行で区切る)</label>
                     <textarea id="characterSkills" class="form-control" rows="3" placeholder="ファイアボール&#10;回復魔法&#10;剣術"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="characterTags">タグ (カンマで区切る)</label>
+                    <input type="text" id="characterTags" class="form-control" placeholder="例: 主人公, 戦士, 仲間">
+                    <small class="form-help">タグを使ってキャラクターを分類・検索できます</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -867,6 +1325,82 @@
         </div>
     </div>
 
+    <!-- 関係性追加モーダル -->
+    <div id="relationshipModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="relationshipModalTitle">関係性を追加</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="relationship1">キャラクター1</label>
+                    <select id="relationship1" class="form-control" required>
+                        <option value="">-- キャラクターを選択 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="relationship2">キャラクター2</label>
+                    <select id="relationship2" class="form-control" required>
+                        <option value="">-- キャラクターを選択 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="relationshipType">関係性のタイプ</label>
+                    <select id="relationshipType" class="form-control" required>
+                        <option value="">-- 関係性を選択 --</option>
+                        <option value="友人">友人</option>
+                        <option value="親友">親友</option>
+                        <option value="恋人">恋人</option>
+                        <option value="家族">家族</option>
+                        <option value="師弟">師弟</option>
+                        <option value="ライバル">ライバル</option>
+                        <option value="敵対">敵対</option>
+                        <option value="仲間">仲間</option>
+                        <option value="知人">知人</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="relationshipStrength">関係の強さ (0-100)</label>
+                    <input type="range" id="relationshipStrength" class="form-control" min="0" max="100" value="50">
+                    <span id="relationshipStrengthValue">50</span>
+                </div>
+                <div class="form-group">
+                    <label for="relationshipDescription">関係の詳細</label>
+                    <textarea id="relationshipDescription" class="form-control" rows="3" placeholder="二人の関係性について詳しく説明"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveRelationship" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- プロジェクト編集モーダル -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="projectModalTitle">プロジェクト編集</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="projectName">プロジェクト名</label>
+                    <input type="text" id="projectName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectDescription">説明</label>
+                    <textarea id="projectDescription" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveProject" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
     <!-- モンスター追加モーダル -->
     <div id="monsterModal" class="modal">
         <div class="modal-content">
@@ -1090,6 +1624,9 @@
     <script src="js/simulator.js"></script>
     <script src="js/bag.js"></script>
     <script src="js/media.js"></script>
+    <script src="js/collaboration.js"></script>
+    <script src="js/output.js"></script>
+    <script src="js/templates.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/app.js"></script>

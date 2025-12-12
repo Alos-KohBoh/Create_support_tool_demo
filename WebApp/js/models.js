@@ -16,7 +16,7 @@ class Monster {
 }
 
 class Item {
-    constructor(id, name, type, rarity, imageUrl = '', description = '', effect = '') {
+    constructor(id, name, type, rarity, imageUrl = '', description = '', effect = '', tags = []) {
         this.id = id || this.generateId();
         this.name = name;
         this.type = type;
@@ -24,6 +24,7 @@ class Item {
         this.imageUrl = imageUrl;
         this.description = description;
         this.effect = effect;
+        this.tags = tags || []; // タグ配列
     }
 
     generateId() {
@@ -47,7 +48,8 @@ class DropResult {
 
 // データストレージクラス
 class DataStorage {
-    constructor() {
+    constructor(projectManager = null) {
+        this.projectManager = projectManager;
         this.monsters = [];
         this.items = [];
         this.loadFromLocalStorage();
@@ -56,6 +58,19 @@ class DataStorage {
         if (this.monsters.length === 0) {
             this.initSampleData();
         }
+    }
+
+    // localStorageキーのプレフィックスを取得
+    getKeyPrefix() {
+        if (this.projectManager && this.projectManager.currentProjectId) {
+            return this.projectManager.getProjectDataPrefix(this.projectManager.currentProjectId);
+        }
+        return 'rpg_';
+    }
+
+    // キーを生成
+    getStorageKey(key) {
+        return this.getKeyPrefix() + key;
     }
 
     initSampleData() {
@@ -164,8 +179,8 @@ class DataStorage {
 
     saveToLocalStorage() {
         try {
-            localStorage.setItem('rpg_monsters', JSON.stringify(this.monsters));
-            localStorage.setItem('rpg_items', JSON.stringify(this.items));
+            localStorage.setItem(this.getStorageKey('monsters'), JSON.stringify(this.monsters));
+            localStorage.setItem(this.getStorageKey('items'), JSON.stringify(this.items));
         } catch (e) {
             console.error('データ保存エラー:', e);
         }
@@ -173,8 +188,8 @@ class DataStorage {
 
     loadFromLocalStorage() {
         try {
-            const monstersData = localStorage.getItem('rpg_monsters');
-            const itemsData = localStorage.getItem('rpg_items');
+            const monstersData = localStorage.getItem(this.getStorageKey('monsters'));
+            const itemsData = localStorage.getItem(this.getStorageKey('items'));
 
             if (monstersData) {
                 const parsed = JSON.parse(monstersData);
@@ -188,7 +203,7 @@ class DataStorage {
             if (itemsData) {
                 const parsed = JSON.parse(itemsData);
                 this.items = parsed.map(i => 
-                    new Item(i.id, i.name, i.type, i.rarity, i.imageUrl || '', i.description || '', i.effect || '')
+                    new Item(i.id, i.name, i.type, i.rarity, i.imageUrl || '', i.description || '', i.effect || '', i.tags || [])
                 );
             }
         } catch (e) {
@@ -199,7 +214,514 @@ class DataStorage {
     clearAll() {
         this.monsters = [];
         this.items = [];
-        localStorage.removeItem('rpg_monsters');
-        localStorage.removeItem('rpg_items');
+        localStorage.removeItem(this.getStorageKey('monsters'));
+        localStorage.removeItem(this.getStorageKey('items'));
+        
+        // プロジェクト固有のデータもクリア
+        const prefix = this.getKeyPrefix();
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(prefix) && !key.includes('project_') && !key.includes('auto_backup')) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+}
+
+// バックアップ管理クラス
+class BackupManager {
+    constructor() {
+        this.autoBackupInterval = null;
+        this.autoBackupEnabled = this.getAutoBackupSetting();
+        this.autoBackupIntervalMinutes = this.getAutoBackupInterval();
+        
+        if (this.autoBackupEnabled) {
+            this.startAutoBackup();
+        }
+    }
+
+    // 自動バックアップ設定を取得
+    getAutoBackupSetting() {
+        const setting = localStorage.getItem('rpg_auto_backup_enabled');
+        return setting === null ? true : setting === 'true';
+    }
+
+    // 自動バックアップ間隔を取得（分）
+    getAutoBackupInterval() {
+        const interval = localStorage.getItem('rpg_auto_backup_interval');
+        return interval ? parseInt(interval) : 30; // デフォルト30分
+    }
+
+    // 自動バックアップ設定を保存
+    setAutoBackupSetting(enabled, intervalMinutes) {
+        this.autoBackupEnabled = enabled;
+        this.autoBackupIntervalMinutes = intervalMinutes;
+        localStorage.setItem('rpg_auto_backup_enabled', enabled);
+        localStorage.setItem('rpg_auto_backup_interval', intervalMinutes);
+        
+        if (enabled) {
+            this.startAutoBackup();
+        } else {
+            this.stopAutoBackup();
+        }
+    }
+
+    // 自動バックアップ開始
+    startAutoBackup() {
+        this.stopAutoBackup(); // 既存のタイマーをクリア
+        
+        const intervalMs = this.autoBackupIntervalMinutes * 60 * 1000;
+        this.autoBackupInterval = setInterval(() => {
+            this.createAutoBackup();
+        }, intervalMs);
+        
+        console.log(`自動バックアップを開始しました（${this.autoBackupIntervalMinutes}分間隔）`);
+    }
+
+    // 自動バックアップ停止
+    stopAutoBackup() {
+        if (this.autoBackupInterval) {
+            clearInterval(this.autoBackupInterval);
+            this.autoBackupInterval = null;
+            console.log('自動バックアップを停止しました');
+        }
+    }
+
+    // 自動バックアップ作成
+    createAutoBackup() {
+        try {
+            const backupData = this.getAllData();
+            const timestamp = new Date().toISOString();
+            
+            // localStorageに最新の自動バックアップを保存
+            localStorage.setItem('rpg_auto_backup_latest', JSON.stringify({
+                timestamp,
+                data: backupData
+            }));
+            
+            console.log('自動バックアップを作成しました:', timestamp);
+        } catch (e) {
+            console.error('自動バックアップ作成エラー:', e);
+        }
+    }
+
+    // 手動バックアップ（ファイルダウンロード）
+    createManualBackup() {
+        try {
+            const backupData = this.getAllData();
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `rpg_backup_${timestamp}.json`;
+            
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            return true;
+        } catch (e) {
+            console.error('手動バックアップ作成エラー:', e);
+            return false;
+        }
+    }
+
+    // すべてのデータを取得
+    getAllData() {
+        const data = {};
+        
+        // localStorageからすべてのRPG関連データを取得
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('rpg_')) {
+                try {
+                    const value = localStorage.getItem(key);
+                    data[key] = JSON.parse(value);
+                } catch (e) {
+                    // JSON以外のデータはそのまま保存
+                    data[key] = localStorage.getItem(key);
+                }
+            }
+        }
+        
+        return data;
+    }
+
+    // バックアップからリストア
+    restoreBackup(backupData) {
+        try {
+            // 既存のRPG関連データをクリア
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('rpg_')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            // バックアップデータを復元
+            Object.keys(backupData).forEach(key => {
+                const value = backupData[key];
+                if (typeof value === 'object') {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                    localStorage.setItem(key, value);
+                }
+            });
+            
+            return true;
+        } catch (e) {
+            console.error('バックアップリストアエラー:', e);
+            return false;
+        }
+    }
+
+    // ファイルからバックアップをリストア
+    restoreFromFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    const success = this.restoreBackup(backupData);
+                    if (success) {
+                        resolve(true);
+                    } else {
+                        reject(new Error('リストアに失敗しました'));
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            
+            reader.onerror = () => reject(new Error('ファイル読み込みエラー'));
+            reader.readAsText(file);
+        });
+    }
+
+    // 最新の自動バックアップを取得
+    getLatestAutoBackup() {
+        const backup = localStorage.getItem('rpg_auto_backup_latest');
+        return backup ? JSON.parse(backup) : null;
+    }
+
+    // バックアップ情報を取得
+    getBackupInfo() {
+        const latestAutoBackup = this.getLatestAutoBackup();
+        const dataSize = new Blob([JSON.stringify(this.getAllData())]).size;
+        
+        return {
+            autoBackupEnabled: this.autoBackupEnabled,
+            autoBackupInterval: this.autoBackupIntervalMinutes,
+            lastBackupTime: latestAutoBackup ? new Date(latestAutoBackup.timestamp).toLocaleString('ja-JP') : null,
+            dataSize: (dataSize / 1024).toFixed(2) + ' KB'
+        };
+    }
+
+    // 自動バックアップが有効か確認
+    isAutoBackupEnabled() {
+        return this.autoBackupEnabled;
+    }
+
+    // 自動バックアップを有効/無効にする
+    setAutoBackupEnabled(enabled) {
+        this.autoBackupEnabled = enabled;
+        localStorage.setItem('rpg_auto_backup_enabled', enabled);
+        
+        if (enabled) {
+            this.startAutoBackup();
+        } else {
+            this.stopAutoBackup();
+        }
+    }
+
+    // 自動バックアップ間隔を設定
+    setAutoBackupInterval(intervalMinutes) {
+        this.autoBackupIntervalMinutes = intervalMinutes;
+        localStorage.setItem('rpg_auto_backup_interval', intervalMinutes);
+        
+        // 自動バックアップが有効な場合は再起動
+        if (this.autoBackupEnabled) {
+            this.startAutoBackup();
+        }
+    }
+}
+
+// プロジェクト管理クラス
+class ProjectManager {
+    constructor() {
+        this.currentProjectId = this.getCurrentProjectId();
+        this.projects = this.loadProjects();
+        
+        // 初回起動時にデフォルトプロジェクトを作成
+        if (this.projects.length === 0) {
+            this.createProject('デフォルトプロジェクト', '最初のRPGプロジェクト');
+        }
+    }
+
+    // プロジェクトID生成
+    generateProjectId() {
+        return 'project_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // 現在のプロジェクトIDを取得
+    getCurrentProjectId() {
+        return localStorage.getItem('rpg_current_project') || null;
+    }
+
+    // 現在のプロジェクトIDを設定
+    setCurrentProjectId(projectId) {
+        this.currentProjectId = projectId;
+        localStorage.setItem('rpg_current_project', projectId);
+    }
+
+    // プロジェクト一覧を読み込み
+    loadProjects() {
+        const projectsJson = localStorage.getItem('rpg_projects');
+        return projectsJson ? JSON.parse(projectsJson) : [];
+    }
+
+    // プロジェクト一覧を保存
+    saveProjects() {
+        localStorage.setItem('rpg_projects', JSON.stringify(this.projects));
+    }
+
+    // プロジェクトを作成
+    createProject(name, description = '') {
+        const projectId = this.generateProjectId();
+        const project = {
+            id: projectId,
+            name: name,
+            description: description,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        this.projects.push(project);
+        this.saveProjects();
+        
+        // 最初のプロジェクトの場合は自動的に選択
+        if (this.projects.length === 1) {
+            this.setCurrentProjectId(projectId);
+        }
+        
+        return project;
+    }
+
+    // プロジェクトを取得
+    getProject(projectId) {
+        return this.projects.find(p => p.id === projectId);
+    }
+
+    // 現在のプロジェクトを取得
+    getCurrentProject() {
+        if (!this.currentProjectId) return null;
+        return this.getProject(this.currentProjectId);
+    }
+
+    // プロジェクト一覧を取得
+    getAllProjects() {
+        return this.projects;
+    }
+
+    // プロジェクトを更新
+    updateProject(projectId, name, description) {
+        const project = this.getProject(projectId);
+        if (project) {
+            project.name = name;
+            project.description = description;
+            project.updatedAt = new Date().toISOString();
+            this.saveProjects();
+            return true;
+        }
+        return false;
+    }
+
+    // プロジェクトを削除
+    deleteProject(projectId) {
+        // プロジェクトのデータをすべて削除
+        this.clearProjectData(projectId);
+        
+        // プロジェクト情報を削除
+        this.projects = this.projects.filter(p => p.id !== projectId);
+        this.saveProjects();
+        
+        // 削除したプロジェクトが現在のプロジェクトだった場合
+        if (this.currentProjectId === projectId) {
+            // 別のプロジェクトがあれば切り替え
+            if (this.projects.length > 0) {
+                this.switchProject(this.projects[0].id);
+            } else {
+                // プロジェクトがなくなった場合は新規作成
+                const newProject = this.createProject('デフォルトプロジェクト', '新しいRPGプロジェクト');
+                this.switchProject(newProject.id);
+            }
+        }
+        
+        return true;
+    }
+
+    // プロジェクトを切り替え
+    switchProject(projectId) {
+        const project = this.getProject(projectId);
+        if (!project) return false;
+        
+        // 現在のプロジェクトIDを設定
+        this.setCurrentProjectId(projectId);
+        
+        return true;
+    }
+
+    // プロジェクトのデータキープレフィックスを取得
+    getProjectDataPrefix(projectId) {
+        return `rpg_project_${projectId}_`;
+    }
+
+    // プロジェクトのデータをすべて削除
+    clearProjectData(projectId) {
+        const prefix = this.getProjectDataPrefix(projectId);
+        const keysToRemove = [];
+        
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(prefix)) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+
+    // プロジェクトのデータをエクスポート
+    exportProjectData(projectId) {
+        const prefix = this.getProjectDataPrefix(projectId);
+        const projectData = {
+            project: this.getProject(projectId),
+            data: {}
+        };
+        
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(prefix)) {
+                try {
+                    const value = localStorage.getItem(key);
+                    projectData.data[key] = JSON.parse(value);
+                } catch (e) {
+                    projectData.data[key] = localStorage.getItem(key);
+                }
+            }
+        }
+        
+        return projectData;
+    }
+
+    // プロジェクトのデータをインポート
+    importProjectData(projectData) {
+        // プロジェクト情報を作成
+        const project = this.createProject(
+            projectData.project.name + ' (インポート)',
+            projectData.project.description
+        );
+        
+        // データをインポート
+        const oldPrefix = this.getProjectDataPrefix(projectData.project.id);
+        const newPrefix = this.getProjectDataPrefix(project.id);
+        
+        Object.keys(projectData.data).forEach(key => {
+            const newKey = key.replace(oldPrefix, newPrefix);
+            const value = projectData.data[key];
+            
+            if (typeof value === 'object') {
+                localStorage.setItem(newKey, JSON.stringify(value));
+            } else {
+                localStorage.setItem(newKey, value);
+            }
+        });
+        
+        return project;
+    }
+}
+
+// タグ管理クラス
+class TagManager {
+    constructor() {
+        this.tags = this.loadTags();
+    }
+
+    // タグ一覧をlocalStorageから読み込み
+    loadTags() {
+        const saved = localStorage.getItem('rpg_tags');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    // タグ一覧をlocalStorageに保存
+    saveTags() {
+        localStorage.setItem('rpg_tags', JSON.stringify(this.tags));
+    }
+
+    // タグを追加
+    addTag(tagName, color = '#3498db') {
+        const tag = {
+            id: 'tag_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            name: tagName,
+            color: color,
+            createdAt: new Date().toISOString()
+        };
+        
+        this.tags.push(tag);
+        this.saveTags();
+        return tag;
+    }
+
+    // タグを削除
+    deleteTag(tagId) {
+        this.tags = this.tags.filter(t => t.id !== tagId);
+        this.saveTags();
+    }
+
+    // タグを更新
+    updateTag(tagId, tagName, color) {
+        const tag = this.tags.find(t => t.id === tagId);
+        if (tag) {
+            tag.name = tagName;
+            tag.color = color;
+            this.saveTags();
+        }
+    }
+
+    // タグを取得
+    getTag(tagId) {
+        return this.tags.find(t => t.id === tagId);
+    }
+
+    // タグ名でタグを取得
+    getTagByName(tagName) {
+        return this.tags.find(t => t.name === tagName);
+    }
+
+    // 全タグを取得
+    getAllTags() {
+        return this.tags;
+    }
+
+    // タグ名から自動的にタグを取得または作成
+    getOrCreateTag(tagName) {
+        let tag = this.getTagByName(tagName);
+        if (!tag) {
+            tag = this.addTag(tagName);
+        }
+        return tag;
+    }
+
+    // タグIDの配列からタグオブジェクトの配列を取得
+    getTagsById(tagIds) {
+        return tagIds.map(id => this.getTag(id)).filter(t => t);
     }
 }
