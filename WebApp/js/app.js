@@ -646,7 +646,8 @@ class App {
         document.querySelectorAll('.main-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabName = btn.getAttribute('data-tab');
-                const section = btn.closest('.section-screen');
+                // .section-screen または .plot-screen のどちらかを親として取得
+                const section = btn.closest('.section-screen') || btn.closest('.plot-screen');
                 
                 if (!section) return;
 
@@ -661,9 +662,9 @@ class App {
                     c.style.display = 'none';
                 });
 
-                // 選択されたタブをアクティブ化
+                // 選択されたタブをアクティブ化（document.getElementByIdで直接取得）
                 btn.classList.add('active');
-                const targetContent = section.querySelector(`#${tabName}`);
+                const targetContent = document.getElementById(tabName);
                 if (targetContent) {
                     targetContent.classList.add('active');
                     targetContent.style.display = 'block';
@@ -671,7 +672,12 @@ class App {
 
                 // 世界観タブがクリックされた時に世界観設定を読み込む
                 if (tabName === 'worldmap-content') {
-                    this.loadWorldSetting();
+                    setTimeout(() => this.loadWorldSetting(), 100);
+                }
+
+                // コメントタブがクリックされた時にコメント一覧を更新
+                if (tabName === 'comments-content') {
+                    setTimeout(() => this.renderComments(), 100);
                 }
 
                 // シミュレーションセクションの場合の特別処理
@@ -4111,6 +4117,8 @@ class App {
 
         const worldSettingText = document.getElementById('worldSettingText');
         const lastUpdate = document.getElementById('worldSettingLastUpdate');
+        
+        if (!worldSettingText) return;
         
         if (worldSettingText) {
             const storageKey = `worldsetting_${currentWork.id}`;
