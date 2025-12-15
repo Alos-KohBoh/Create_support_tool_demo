@@ -522,7 +522,15 @@ class UIManager {
                 const levelInputId = `monsterLevelInput_${monster.id || idx}`;
                 // ステータス計算関数（レベル1は基礎値、それ以外は 基礎値+(基礎値×レベル×0.8) の整数値）
                 const getStatValue = (statId, level) => {
-                    const base = (monster[statId] !== undefined ? monster[statId] : statDefaults[statId] || 0);
+                    // baseStats優先、なければ従来通り
+                    let base = 0;
+                    if (monster.baseStats && monster.baseStats[statId] !== undefined) {
+                        base = monster.baseStats[statId];
+                    } else if (monster[statId] !== undefined) {
+                        base = monster[statId];
+                    } else {
+                        base = statDefaults[statId] || 0;
+                    }
                     if (level === 1) return base;
                     return Math.floor(base + (base * level * 0.8));
                 };

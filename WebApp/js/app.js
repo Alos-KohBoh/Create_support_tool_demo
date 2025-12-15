@@ -6,10 +6,10 @@ class App {
             if (!container || !window.masterManager) return;
             const stats = window.masterManager.masterConfig.characterStats || [];
             container.innerHTML = stats.map(stat => {
-                // 値の優先順位: 編集時の値 > マスタ初期値 > 空
+                // 必ずbaseStatsのみを参照
                 let value = '';
-                if (monster && monster[stat.id] !== undefined) {
-                    value = monster[stat.id];
+                if (monster && monster.baseStats && monster.baseStats[stat.id] !== undefined) {
+                    value = monster.baseStats[stat.id];
                 } else if (stat.defaultValue !== undefined) {
                     value = stat.defaultValue;
                 }
@@ -30,6 +30,37 @@ class App {
                 </div>
                 `;
             }).join('');
+
+            // 編集モード時: input変更で即時保存
+            if (monster && monster.id) {
+                stats.forEach(stat => {
+                    const input = document.getElementById(`monsterStat_${stat.id}`);
+                    if (input) {
+                        input.addEventListener('input', (e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            monster[stat.id] = val;
+                            // ステータス即時保存
+                            if (window.app && window.app.dataStorage) {
+                                window.app.dataStorage.updateMonster(monster);
+                            }
+                        });
+                    }
+                });
+            } else {
+                // 新規追加モード: 一時的なmonsterオブジェクトをwindowに保持し、input変更で値を反映
+                if (!window._newMonsterStats) window._newMonsterStats = {};
+                stats.forEach(stat => {
+                    const input = document.getElementById(`monsterStat_${stat.id}`);
+                    if (input) {
+                        input.addEventListener('input', (e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            window._newMonsterStats[stat.id] = val;
+                        });
+                        // 初期値も反映
+                        window._newMonsterStats[stat.id] = parseInt(input.value) || 0;
+                    }
+                });
+            }
         }
     constructor() {
         // プロジェクトマネージャーを先に初期化
@@ -1096,12 +1127,12 @@ class App {
             return;
         }
 
-        // ステータス値取得
-        const stats = {};
-        const statIds = ['hp','mp','attack','defense','speed','luck'];
-        statIds.forEach(id => {
-            const input = document.getElementById(`monsterStat_${id}`);
-            stats[id] = input ? parseInt(input.value) || 0 : 0;
+        // ステータス値取得（monster-stat-inputクラスの全inputを保存）
+        let baseStats = {};
+        const statInputs = document.querySelectorAll('.monster-stat-input');
+        statInputs.forEach(input => {
+            const statId = input.dataset.statId || input.name;
+            baseStats[statId] = parseInt(input.value) || 0;
         });
         if (editId) {
             // 編集モード
@@ -1113,25 +1144,31 @@ class App {
                 monster.imageUrl = imageUrl;
                 monster.description = description;
                 monster.exp = exp;
-                // ステータス反映
-                Object.assign(monster, stats);
+                // ステータスはbaseStatsにのみ格納
+                monster.baseStats = { ...baseStats };
                 this.dataStorage.updateMonster(monster);
                 alert('モンスター情報を更新しました');
             }
             delete document.getElementById('saveMonster').dataset.editId;
         } else {
             // 新規追加モード
+            if (window._newMonsterStats) {
+                baseStats = {...window._newMonsterStats};
+            } else {
+                statInputs.forEach(input => {
+                    const statId = input.dataset.statId || input.name;
+                    baseStats[statId] = parseInt(input.value) || 0;
+                });
+            }
             const monster = new Monster(null, name, danger, rarity, [], imageUrl, description, exp);
-            // ステータス反映
-            Object.assign(monster, stats);
+            monster.baseStats = { ...baseStats };
             this.dataStorage.addMonster(monster);
             alert('モンスターを追加しました');
+            window._newMonsterStats = {};
         }
-
         this.loadMonsterSelect();
         this.refreshDataLists();
         this.uiManager.hideModal('monsterModal');
-
         // フォームクリア
         document.getElementById('monsterName').value = '';
         document.getElementById('monsterImageUrl').value = '';
@@ -1617,22 +1654,8 @@ class App {
         // 既存モンスターの編集モード
         document.getElementById('saveMonster').dataset.editId = monsterId;
         this.uiManager.showModal('monsterModal');
-        // ステータス欄を値入りで上書き
+        // ステータス欄を値入りで上書き（baseStatsのみ）
         this.generateMonsterStatsFields(monster);
-            // モンスター追加ボタン押下時に必ず空欄生成＋デバッグ
-            const addMonsterBtn = document.getElementById('addMonsterBtn');
-            if (addMonsterBtn) {
-                addMonsterBtn.addEventListener('click', () => {
-                    if (typeof this.generateMonsterStatsFields === 'function') {
-                        console.log('[DEBUG] addMonsterBtn: generateMonsterStatsFields() called');
-                        this.generateMonsterStatsFields();
-                    }
-                });
-            }
-            // 初期化時にも空欄生成
-            if (typeof this.generateMonsterStatsFields === 'function') {
-                this.generateMonsterStatsFields();
-            }
     }
 
     // アイテム編集
@@ -2218,18 +2241,95 @@ class App {
         }
     }
 
-    generateCharacterStatsFields() {
+    // characterStatsObj: {statId: value} を受け取り、基礎値をinput欄に反映
+    generateCharacterStatsFields(characterStatsObj = {}) {
         const container = document.getElementById('characterStatsFields');
         if (!container) return;
-        
         const stats = masterManager.masterConfig.characterStats || [];
-        container.innerHTML = stats.map(stat => `
-            <div class="form-group">
-                <label for="characterStat_${stat.id}">${stat.label}</label>
-                <input type="number" id="characterStat_${stat.id}" class="form-control character-stat-input" 
-                       data-stat-id="${stat.id}" value="${stat.defaultValue}" min="0">
-            </div>
-        `).join('');
+        // 入力欄（基礎値）
+        container.innerHTML = stats.map(stat => {
+            const value = (characterStatsObj[stat.id] !== undefined)
+                ? characterStatsObj[stat.id]
+                : (stat.defaultValue !== undefined ? stat.defaultValue : 0);
+            return `
+                <div class="form-group">
+                    <label for="characterStat_${stat.id}">${stat.label}</label>
+                    <input type="number" id="characterStat_${stat.id}" class="form-control character-stat-input" 
+                        data-stat-id="${stat.id}" value="${value}" min="0">
+                </div>
+            `;
+        }).join('');
+
+        // 最終値表示欄を追加
+        const finalStatsDivId = 'characterFinalStatsFields';
+        let finalStatsDiv = document.getElementById(finalStatsDivId);
+        if (!finalStatsDiv) {
+            finalStatsDiv = document.createElement('div');
+            finalStatsDiv.id = finalStatsDivId;
+            finalStatsDiv.className = 'final-stats-fields';
+            container.parentNode.insertBefore(finalStatsDiv, container.nextSibling);
+        }
+        this.updateCharacterFinalStatsView();
+
+        // 入力欄・レベル・職業・種族変更時に最終値再計算
+        stats.forEach(stat => {
+            const input = document.getElementById(`characterStat_${stat.id}`);
+            if (input) {
+                input.addEventListener('input', () => this.updateCharacterFinalStatsView());
+            }
+        });
+        ['characterLevel','characterJob','characterRace'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', () => this.updateCharacterFinalStatsView());
+            }
+        });
+    }
+
+    // レベル・補正込みの最終値を計算・表示
+    updateCharacterFinalStatsView() {
+        const stats = masterManager.masterConfig.characterStats || [];
+        const levelUpConfig = masterManager.masterConfig.levelUpConfig || {};
+        const jobBonuses = masterManager.masterConfig.jobBonuses || {};
+        const raceBonuses = masterManager.masterConfig.raceBonuses || {};
+        const job = document.getElementById('characterJob')?.value || '';
+        const race = document.getElementById('characterRace')?.value || '';
+        const level = parseInt(document.getElementById('characterLevel')?.value) || 1;
+        // 入力値（基礎値）
+        const baseStats = {};
+        stats.forEach(stat => {
+            const input = document.getElementById(`characterStat_${stat.id}`);
+            baseStats[stat.id] = input ? (parseInt(input.value) || 0) : 0;
+        });
+        // ボーナス加算
+        let allocatedBonus = {};
+        if (this.editingCharacterId) {
+            const existingCharacter = this.characterManager.getCharacter(this.editingCharacterId);
+            allocatedBonus = existingCharacter?.allocatedBonus || {};
+        }
+        // 最終値計算
+        const finalStats = {};
+        stats.forEach(stat => {
+            const baseValue = baseStats[stat.id] || 0;
+            const levelUpValue = levelUpConfig[stat.id] || 1;
+            const jobBonus = (jobBonuses[job] && jobBonuses[job][stat.id]) || 0;
+            const raceBonus = (raceBonuses[race] && raceBonuses[race][stat.id]) || 0;
+            const totalLevelUpValue = levelUpValue + jobBonus + raceBonus;
+            const levelUps = level - 1;
+            let value = baseValue + (totalLevelUpValue * levelUps);
+            // ボーナスポイント加算
+            const points = allocatedBonus[stat.id] || 0;
+            const rates = { hp: 10, mp: 5 };
+            const rate = rates[stat.id] || 1;
+            value += points * rate;
+            finalStats[stat.id] = value;
+        });
+        // 表示
+        const finalStatsDiv = document.getElementById('characterFinalStatsFields');
+        if (finalStatsDiv) {
+            finalStatsDiv.innerHTML = '<h5>最終ステータス（レベル・補正込み/編集不可）</h5>' +
+                stats.map(stat => `<div><strong>${stat.label}:</strong> ${finalStats[stat.id]}</div>`).join('');
+        }
     }
 
     saveCharacter() {
@@ -2243,7 +2343,7 @@ class App {
         const skillsText = document.getElementById('characterSkills').value.trim();
         const tagsText = document.getElementById('characterTags').value.trim();
 
-        // 動的ステータスを収集
+        // 動的ステータス（基礎値）のみを収集
         const stats = {};
         document.querySelectorAll('.character-stat-input').forEach(input => {
             const statId = input.dataset.statId;
@@ -2254,52 +2354,23 @@ class App {
         const tags = tagsText ? tagsText.split(',').map(t => t.trim()).filter(t => t) : [];
 
         const level = parseInt(document.getElementById('characterLevel').value) || 1;
-        
-        // ステータスをレベルから再計算
-        const masterConfig = JSON.parse(localStorage.getItem('masterConfig') || '{}');
-        const levelUpConfig = masterConfig.levelUpConfig || {};
-        const characterStats = masterConfig.characterStats || [];
-        const jobBonuses = masterConfig.jobBonuses || {};
-        const raceBonuses = masterConfig.raceBonuses || {};
-        
         const job = document.getElementById('characterJob').value;
         const race = document.getElementById('characterRace').value;
-        
-        // 基本ステータスを計算
-        const calculatedStats = {};
-        characterStats.forEach(stat => {
-            const baseValue = stat.defaultValue || 0;
-            const levelUpValue = levelUpConfig[stat.id] || 1;
-            const jobBonus = (jobBonuses[job] && jobBonuses[job][stat.id]) || 0;
-            const raceBonus = (raceBonuses[race] && raceBonuses[race][stat.id]) || 0;
-            const totalLevelUpValue = levelUpValue + jobBonus + raceBonus;
-            
-            // レベル×上昇値 + ボーナスポイント
-            const levelUps = level - 1;
-            calculatedStats[stat.id] = baseValue + (totalLevelUpValue * levelUps);
-        });
-        
+
         // ボーナスポイントからの加算を適用
         let allocatedBonus = {};
         if (this.editingCharacterId) {
             const existingCharacter = this.characterManager.getCharacter(this.editingCharacterId);
             allocatedBonus = existingCharacter.allocatedBonus || {};
         }
-        
-        Object.keys(allocatedBonus).forEach(statId => {
-            const points = allocatedBonus[statId];
-            const rates = { hp: 10, mp: 5 };
-            const rate = rates[statId] || 1;
-            calculatedStats[statId] = (calculatedStats[statId] || 0) + (points * rate);
-        });
-        
+
         const characterData = {
             name,
             job: job,
             race: race,
             element: document.getElementById('characterElement').value,
             level: level,
-            stats: calculatedStats, // 再計算されたステータス
+            stats: stats, // 基礎値のみ保存
             personality: document.getElementById('characterPersonality').value.trim(),
             background: document.getElementById('characterBackground').value.trim(),
             dialogues: dialoguesText ? dialoguesText.split('\n').filter(d => d.trim()) : [],
@@ -2351,9 +2422,28 @@ class App {
 
         let html = '<div class="data-grid">';
         characters.forEach(character => {
-            // ステータス表示を生成
+            // ステータス表示を「最終値」で計算
             const statsHtml = statsList.map((stat, index) => {
-                const value = character.stats[stat.id] || stat.defaultValue;
+                // 基礎値
+                const base = character.stats[stat.id] || stat.defaultValue || 0;
+                // レベル・職業・種族補正
+                const masterConfig = masterManager.masterConfig || {};
+                const levelUpConfig = masterConfig.levelUpConfig || {};
+                const jobBonuses = masterConfig.jobBonuses || {};
+                const raceBonuses = masterConfig.raceBonuses || {};
+                const level = character.level || 1;
+                const levelUpValue = levelUpConfig[stat.id] || 1;
+                const jobBonus = (jobBonuses[character.job] && jobBonuses[character.job][stat.id]) || 0;
+                const raceBonus = (raceBonuses[character.race] && raceBonuses[character.race][stat.id]) || 0;
+                const totalLevelUpValue = levelUpValue + jobBonus + raceBonus;
+                const levelUps = level - 1;
+                let value = base + (totalLevelUpValue * levelUps);
+                // ボーナスポイント加算
+                const allocatedBonus = character.allocatedBonus || {};
+                const points = allocatedBonus[stat.id] || 0;
+                const rates = { hp: 10, mp: 5 };
+                const rate = rates[stat.id] || 1;
+                value += points * rate;
                 return `<span>${stat.label}: ${value}</span>`;
             }).reduce((acc, cur, index) => {
                 if (index % 3 === 0) {
@@ -2462,14 +2552,8 @@ class App {
         document.getElementById('characterRace').value = character.race;
         document.getElementById('characterElement').value = character.element;
         
-        // ステータスフィールドを生成して値を設定
-        this.generateCharacterStatsFields();
-        Object.keys(character.stats).forEach(statId => {
-            const input = document.getElementById(`characterStat_${statId}`);
-            if (input) {
-                input.value = character.stats[statId];
-            }
-        });
+        // ステータスフィールドを基礎値で生成
+        this.generateCharacterStatsFields(character.stats);
 
         // ボーナスポイント振り分けUIを表示
         this.showBonusAllocation(character);
@@ -2697,12 +2781,7 @@ class App {
                 if (bonusDisplay) {
                     bonusDisplay.textContent = '0';
                 }
-                
-                // ステータス入力値を更新
-                const statInput = document.getElementById(`characterStat_${stat.id}`);
-                if (statInput) {
-                    statInput.value = character.stats[stat.id];
-                }
+                // ステータス入力欄は上書きしない
             });
             
             alert('ボーナスポイントをリセットしました');
@@ -2721,45 +2800,10 @@ class App {
         console.log('levelUpConfig:', levelUpConfig);
         console.log('characterStats:', characterStats);
         
-        // レベル1からの上昇回数
-        const levelUps = level - 1;
-        
-        // 各ステータスを計算
-        characterStats.forEach(stat => {
-            const baseValue = stat.defaultValue || 0;
-            const levelUpValue = levelUpConfig[stat.id] || 1;
-            const newValue = baseValue + (levelUpValue * levelUps);
-            
-            console.log(`${stat.id}: base=${baseValue}, levelUp=${levelUpValue}, level=${level}, newValue=${newValue}`);
-            
-            const input = document.getElementById(`characterStat_${stat.id}`);
-            if (input) {
-                input.value = newValue;
-            }
-        });
-        
-        // カスタムステータスも処理
-        document.querySelectorAll('.character-stat-input').forEach(input => {
-            const statId = input.dataset.statId;
-            if (!characterStats.find(s => s.id === statId)) {
-                // カスタムステータスはデフォルト+1で計算
-                const levelUpValue = levelUpConfig[statId] || 1;
-                const currentValue = parseInt(input.value) || 0;
-                
-                // 現在のレベルから逆算して基本値を推定
-                if (this.editingCharacterId) {
-                    const character = this.characterManager.getCharacter(this.editingCharacterId);
-                    if (character) {
-                        const oldLevel = character.level;
-                        const oldValue = character.stats[statId] || 0;
-                        const oldLevelUps = oldLevel - 1;
-                        const estimatedBase = oldValue - (levelUpValue * oldLevelUps);
-                        const newValue = estimatedBase + (levelUpValue * levelUps);
-                        input.value = newValue;
-                    }
-                }
-            }
-        });
+        // 入力欄は一切上書きしない。最終値は表示専用欄で再計算・表示する。
+        if (typeof this.updateCharacterFinalStatsView === 'function') {
+            this.updateCharacterFinalStatsView();
+        }
     }
 
     // レベル変更時にボーナスポイントを更新
@@ -2801,70 +2845,7 @@ class App {
         }
     }
 
-    deleteCharacter(id) {
-        if (!confirm('このキャラクターを削除しますか?')) return;
-        
-        // キャラクターに関連する関係性も削除
-        const relationships = this.relationshipManager.getRelationshipsForCharacter(id);
-        relationships.forEach(rel => {
-            this.relationshipManager.deleteRelationship(rel.id);
-        });
-        
-        this.characterManager.deleteCharacter(id);
-        this.renderCharacterList();
-        this.renderRelationshipList();
-        this.updateCharacterTagFilter(); // タグフィルターを更新
-    }
-
-    // 経験値を追加
-    addExpToCharacter(id) {
-        const character = this.characterManager.getCharacter(id);
-        if (!character) return;
-
-        const expAmount = prompt(`${character.name}に追加する経験値を入力してください:`, '100');
-        if (!expAmount || isNaN(expAmount)) return;
-
-        const amount = parseInt(expAmount);
-        if (amount <= 0) {
-            alert('正の数値を入力してください。');
-            return;
-        }
-
-        const leveledUp = character.addExp(amount);
-        this.characterManager.updateCharacter(id, character);
-
-        if (leveledUp) {
-            alert(`${character.name}がレベル${character.level}にレベルアップしました！`);
-        } else {
-            alert(`${character.name}に${amount}の経験値を追加しました。`);
-        }
-
-        this.renderCharacterList();
-    }
-
-    // レベルアップ履歴を表示
-    viewLevelHistory(id) {
-        const character = this.characterManager.getCharacter(id);
-        if (!character) return;
-
-        if (character.levelHistory.length === 0) {
-            alert('レベルアップ履歴がありません。');
-            return;
-        }
-
-        let message = `${character.name}のレベルアップ履歴:\n\n`;
-        character.levelHistory.forEach((history, index) => {
-            const date = new Date(history.timestamp);
-            message += `${index + 1}. レベル${history.level} (${date.toLocaleString('ja-JP')})\n`;
-        });
-
-        alert(message);
-    }
-
-    // ==========================
-    // 関係性管理機能
-    // ==========================
-
+    // 関係性追加ボタン
     showRelationshipModal() {
         // キャラクター選択肢を更新
         this.updateRelationshipCharacterSelects();
@@ -3358,7 +3339,7 @@ class App {
         let html = '<div class="scene-cards-grid">';
         scenes.forEach(scene => {
             const chapter = this.plotManager.getChapter(scene.chapterId);
-            const chapterTitle = chapter ? chapter.title : '不明な章';
+            const chapterTitle = chapter ? chapter.title : '不明';
 
             // 登場キャラクター
             const characterNames = scene.characters.map(charId => {
@@ -3783,6 +3764,7 @@ class App {
             const issues = await this.callConsistencyCheckAPI(currentWork);
             
             // 結果を表示
+
             const resultBox = document.getElementById('consistencyResults');
             const contentDiv = document.getElementById('consistencyResultsContent');
             

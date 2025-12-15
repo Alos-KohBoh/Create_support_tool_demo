@@ -1,6 +1,6 @@
 // データモデルクラス
 class Monster {
-    constructor(id, name, dangerLevel, rarity, dropItems = [], imageUrl = '', description = '', exp = 0) {
+    constructor(id, name, dangerLevel, rarity, dropItems = [], imageUrl = '', description = '', exp = 0, statsObj = {}) {
         this.id = id || this.generateId();
         this.name = name;
         this.dangerLevel = dangerLevel;
@@ -9,6 +9,14 @@ class Monster {
         this.imageUrl = imageUrl;
         this.description = description;
         this.exp = exp || 0; // 経験値を追加
+        // ステータス値はbaseStatsとして必ず保持
+        this.baseStats = { ...statsObj };
+        // 互換性のため個別プロパティにも展開（旧データや直接参照用）
+        if (statsObj && typeof statsObj === 'object') {
+            Object.keys(statsObj).forEach(k => {
+                this[k] = statsObj[k];
+            });
+        }
     }
 
     generateId() {
@@ -194,11 +202,26 @@ class DataStorage {
 
             if (monstersData) {
                 const parsed = JSON.parse(monstersData);
-                this.monsters = parsed.map(m => 
-                    new Monster(m.id, m.name, m.dangerLevel || m.danger, m.rarity, 
+                this.monsters = parsed.map(m => {
+                    // baseStatsがあればそれを優先、なければ従来通り
+                    let statsObj = {};
+                    if (m.baseStats && typeof m.baseStats === 'object') {
+                        statsObj = { ...m.baseStats };
+                    } else if (window && window.masterManager && window.masterManager.masterConfig && window.masterManager.masterConfig.characterStats) {
+                        window.masterManager.masterConfig.characterStats.forEach(stat => {
+                            if (m[stat.id] !== undefined) statsObj[stat.id] = m[stat.id];
+                        });
+                    } else {
+                        ['hp','mp','attack','defense','speed','luck'].forEach(id => {
+                            if (m[id] !== undefined) statsObj[id] = m[id];
+                        });
+                    }
+                    return new Monster(
+                        m.id, m.name, m.dangerLevel || m.danger, m.rarity, 
                         m.dropItems.map(d => new DropItem(d.itemName, d.probability)), 
-                        m.imageUrl || '', m.description || '')
-                );
+                        m.imageUrl || '', m.description || '', m.exp || 0, statsObj
+                    );
+                });
             }
 
             if (itemsData) {
