@@ -9,15 +9,39 @@ class MasterDataManager {
     loadMasterConfig() {
         const saved = localStorage.getItem('masterConfig');
         if (saved) {
-            return JSON.parse(saved);
+            const config = JSON.parse(saved);
+            // 新規追加項目のデフォルト値を設定
+            if (!config.jobBonuses) config.jobBonuses = {};
+            if (!config.raceBonuses) config.raceBonuses = {};
+            if (!config.levelUpConfig) {
+                config.levelUpConfig = {
+                    hp: 10,
+                    mp: 5,
+                    attack: 1,
+                    defense: 1,
+                    speed: 1,
+                    luck: 1
+                };
+            }
+            return config;
         }
 
         // デフォルト設定
+        // キャラクターステータスをmonsterFieldsに追加
+        const characterStats = [
+            { id: 'hp', label: 'HP', type: 'number', required: false, system: true },
+            { id: 'mp', label: 'MP', type: 'number', required: false, system: true },
+            { id: 'attack', label: '攻撃力', type: 'number', required: false, system: true },
+            { id: 'defense', label: '防御力', type: 'number', required: false, system: true },
+            { id: 'speed', label: '素早さ', type: 'number', required: false, system: true },
+            { id: 'luck', label: '運', type: 'number', required: false, system: true }
+        ];
         return {
             monsterFields: [
                 { id: 'name', label: '名前', type: 'text', required: true, system: true },
                 { id: 'danger', label: '危険度', type: 'select', required: true, system: true },
-                { id: 'rarity', label: 'レア度', type: 'select', required: true, system: true }
+                { id: 'rarity', label: 'レア度', type: 'select', required: true, system: true },
+                ...characterStats
             ],
             itemFields: [
                 { id: 'name', label: '名前', type: 'text', required: true, system: true },
@@ -40,7 +64,17 @@ class MasterDataManager {
             monsterRarities: ['☆', '★', '★★', '★★★', '★★★★', '★★★★★', '★★★★★★'],
             itemRarities: ['コモン', 'アンコモン', 'レア', 'エピック', 'レジェンド', 'ミシック', 'イモータル', 'レガリア', 'ディヴァイン'],
             dangerLevels: ['極低', '低', '中', '高', '極高'],
-            itemTypes: ['消耗品', '素材', '装備', 'カード', 'その他']
+            itemTypes: ['消耗品', '素材', '装備', 'カード', 'その他'],
+            jobBonuses: {},
+            raceBonuses: {},
+            levelUpConfig: {
+                hp: 10,
+                mp: 5,
+                attack: 1,
+                defense: 1,
+                speed: 1,
+                luck: 1
+            }
         };
     }
 
@@ -214,11 +248,21 @@ class MasterDataManager {
     // キャラクターステータス項目管理
     addCharacterStat(label, defaultValue = 10) {
         if (!this.masterConfig.characterStats) this.masterConfig.characterStats = [];
+        if (!this.masterConfig.monsterFields) this.masterConfig.monsterFields = [];
         const id = 'custom_stat_' + Date.now();
+        // キャラクター用
         this.masterConfig.characterStats.push({
             id,
             label,
             defaultValue: parseInt(defaultValue),
+            system: false
+        });
+        // モンスター用にも同じID・ラベル・type=numberで追加
+        this.masterConfig.monsterFields.push({
+            id,
+            label,
+            type: 'number',
+            required: false,
             system: false
         });
         this.saveMasterConfig();
@@ -363,6 +407,8 @@ class MasterUI {
         this.renderCharacterRaces();
         this.renderCharacterElements();
         this.renderCharacterStats();
+        this.renderJobBonuses();
+        this.renderRaceBonuses();
         
         // ドラッグ&ドロップイベントを設定
         this.setupDragAndDrop();
@@ -699,12 +745,14 @@ class MasterUI {
         if (!container) return;
 
         const jobs = this.masterManager.masterConfig.characterJobs || [];
-        container.innerHTML = jobs.map(job => `
+        container.innerHTML = jobs.map((job, index) => `
             <div class="character-job-item">
                 <div class="field-info">
                     <span class="field-value">${job}</span>
                 </div>
                 <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveCharacterJob(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveCharacterJob(${index}, 1)" ${index === jobs.length - 1 ? 'disabled' : ''}>↓</button>
                     <button class="btn btn-danger btn-sm" onclick="masterUI.removeCharacterJob('${job}')">削除</button>
                 </div>
             </div>
@@ -716,12 +764,14 @@ class MasterUI {
         if (!container) return;
 
         const races = this.masterManager.masterConfig.characterRaces || [];
-        container.innerHTML = races.map(race => `
+        container.innerHTML = races.map((race, index) => `
             <div class="character-race-item">
                 <div class="field-info">
                     <span class="field-value">${race}</span>
                 </div>
                 <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveCharacterRace(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveCharacterRace(${index}, 1)" ${index === races.length - 1 ? 'disabled' : ''}>↓</button>
                     <button class="btn btn-danger btn-sm" onclick="masterUI.removeCharacterRace('${race}')">削除</button>
                 </div>
             </div>
@@ -733,12 +783,14 @@ class MasterUI {
         if (!container) return;
 
         const elements = this.masterManager.masterConfig.characterElements || [];
-        container.innerHTML = elements.map(element => `
+        container.innerHTML = elements.map((element, index) => `
             <div class="character-element-item">
                 <div class="field-info">
                     <span class="field-value">${element}</span>
                 </div>
                 <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveCharacterElement(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveCharacterElement(${index}, 1)" ${index === elements.length - 1 ? 'disabled' : ''}>↓</button>
                     <button class="btn btn-danger btn-sm" onclick="masterUI.removeCharacterElement('${element}')">削除</button>
                 </div>
             </div>
@@ -750,7 +802,7 @@ class MasterUI {
         if (!container) return;
 
         const stats = this.masterManager.masterConfig.characterStats || [];
-        container.innerHTML = stats.map(stat => `
+        container.innerHTML = stats.map((stat, index) => `
             <div class="character-stat-item" ${!stat.system ? 'draggable="true"' : ''}>
                 <div class="field-info">
                     <span class="field-label">${stat.label}</span>
@@ -758,6 +810,8 @@ class MasterUI {
                     ${stat.system ? '<span class="system-badge">システム</span>' : ''}
                 </div>
                 <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveCharacterStat(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveCharacterStat(${index}, 1)" ${index === stats.length - 1 ? 'disabled' : ''}>↓</button>
                     ${!stat.system ? `
                         <button class="btn btn-secondary btn-sm" onclick="masterUI.editCharacterStat('${stat.id}', '${stat.label}', ${stat.defaultValue})">編集</button>
                         <button class="btn btn-danger btn-sm" onclick="masterUI.removeCharacterStat('${stat.id}')">削除</button>
@@ -807,7 +861,145 @@ class MasterUI {
         this.masterManager.updateCharacterStat(id, label, defaultValue);
         this.render();
     }
-}
+
+    // 順番入れ替え関数
+    moveCharacterJob(index, direction) {
+        const jobs = this.masterManager.masterConfig.characterJobs;
+        if (!jobs) return;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= jobs.length) return;
+        [jobs[index], jobs[newIndex]] = [jobs[newIndex], jobs[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+
+    moveCharacterRace(index, direction) {
+        const races = this.masterManager.masterConfig.characterRaces;
+        if (!races) return;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= races.length) return;
+        [races[index], races[newIndex]] = [races[newIndex], races[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+
+    moveCharacterElement(index, direction) {
+        const elements = this.masterManager.masterConfig.characterElements;
+        if (!elements) return;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= elements.length) return;
+        [elements[index], elements[newIndex]] = [elements[newIndex], elements[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+
+    moveCharacterStat(index, direction) {
+        const stats = this.masterManager.masterConfig.characterStats;
+        if (!stats) return;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= stats.length) return;
+        [stats[index], stats[newIndex]] = [stats[newIndex], stats[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+
+    // 職業ボーナスをレンダリング
+    renderJobBonuses() {
+        const container = document.getElementById('jobBonusesList');
+        if (!container) return;
+
+        const jobs = this.masterManager.masterConfig.characterJobs || [];
+        const stats = this.masterManager.masterConfig.characterStats || [];
+        const bonuses = this.masterManager.masterConfig.jobBonuses || {};
+
+        if (jobs.length === 0 || stats.length === 0) {
+            container.innerHTML = '<p>職業またはステータスが設定されていません。</p>';
+            return;
+        }
+
+        let html = '<div class="bonus-table-container">';
+        html += '<table class="bonus-table">';
+        html += '<thead><tr><th>職業</th>';
+        stats.forEach(stat => {
+            html += `<th>${stat.label}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        jobs.forEach(job => {
+            html += `<tr><td><strong>${job}</strong></td>`;
+            stats.forEach(stat => {
+                const currentValue = bonuses[job] && bonuses[job][stat.id] ? bonuses[job][stat.id] : 0;
+                html += `<td><input type="number" value="${currentValue}" 
+                         onchange="masterUI.updateJobBonus('${job}', '${stat.id}', this.value)" 
+                         class="bonus-input"></td>`;
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+
+    // 種族ボーナスをレンダリング
+    renderRaceBonuses() {
+        const container = document.getElementById('raceBonusesList');
+        if (!container) return;
+
+        const races = this.masterManager.masterConfig.characterRaces || [];
+        const stats = this.masterManager.masterConfig.characterStats || [];
+        const bonuses = this.masterManager.masterConfig.raceBonuses || {};
+
+        if (races.length === 0 || stats.length === 0) {
+            container.innerHTML = '<p>種族またはステータスが設定されていません。</p>';
+            return;
+        }
+
+        let html = '<div class="bonus-table-container">';
+        html += '<table class="bonus-table">';
+        html += '<thead><tr><th>種族</th>';
+        stats.forEach(stat => {
+            html += `<th>${stat.label}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        races.forEach(race => {
+            html += `<tr><td><strong>${race}</strong></td>`;
+            stats.forEach(stat => {
+                const currentValue = bonuses[race] && bonuses[race][stat.id] ? bonuses[race][stat.id] : 0;
+                html += `<td><input type="number" value="${currentValue}" 
+                         onchange="masterUI.updateRaceBonus('${race}', '${stat.id}', this.value)" 
+                         class="bonus-input"></td>`;
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+
+    // 職業ボーナスを更新
+    updateJobBonus(job, stat, value) {
+        if (!this.masterManager.masterConfig.jobBonuses) {
+            this.masterManager.masterConfig.jobBonuses = {};
+        }
+        if (!this.masterManager.masterConfig.jobBonuses[job]) {
+            this.masterManager.masterConfig.jobBonuses[job] = {};
+        }
+        this.masterManager.masterConfig.jobBonuses[job][stat] = parseInt(value) || 0;
+        this.masterManager.saveMasterConfig();
+    }
+
+    // 種族ボーナスを更新
+    updateRaceBonus(race, stat, value) {
+        if (!this.masterManager.masterConfig.raceBonuses) {
+            this.masterManager.masterConfig.raceBonuses = {};
+        }
+        if (!this.masterManager.masterConfig.raceBonuses[race]) {
+            this.masterManager.masterConfig.raceBonuses[race] = {};
+        }
+        this.masterManager.masterConfig.raceBonuses[race][stat] = parseInt(value) || 0;
+        this.masterManager.saveMasterConfig();
+    }}
 
 // グローバル変数
 let masterManager;

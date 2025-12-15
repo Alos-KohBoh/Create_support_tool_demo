@@ -3866,3 +3866,107 @@ input[type="range"] {
         width: 100%;
     }
 }
+/* ボーナステーブル */
+.bonus-table-container {
+    overflow-x: auto;
+    margin: 20px 0;
+}
+
+.bonus-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.bonus-table thead {
+    background: var(--primary-color);
+    color: white;
+}
+
+.bonus-table th,
+.bonus-table td {
+    padding: 12px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.bonus-table th:first-child,
+.bonus-table td:first-child {
+    text-align: left;
+    background: #f8f9fa;
+    font-weight: 600;
+    min-width: 100px;
+}
+
+.bonus-table th {
+    font-weight: 600;
+    min-width: 80px;
+}
+
+.bonus-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.bonus-input {
+    width: 70px;
+    padding: 6px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.bonus-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1);
+}
+
+/* ボーナスポイント表示 */
+.bonus-points-display {
+    margin: 10px 0;
+}
+
+.bonus-allocation-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bonus-allocation-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.bonus-allocation-row label {
+    font-weight: 600;
+    margin: 0;
+}
+
+.bonus-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bonus-value {
+    min-width: 30px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.bonus-controls button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

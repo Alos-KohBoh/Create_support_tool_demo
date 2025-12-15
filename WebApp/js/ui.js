@@ -55,16 +55,25 @@ class UIManager {
         });
     }
 
-    // モンスター情報表示
+    // モンスター情報表示（シミュレーション画面用：レベル連動ステータス表示対応）
     displayMonsterInfo(monster) {
         const infoDiv = document.getElementById('monsterInfo');
         const dangerSpan = document.getElementById('monsterDanger');
         const raritySpan = document.getElementById('monsterRarity');
         const descriptionDiv = document.getElementById('monsterDescriptionDisplay');
         const dropTableDiv = document.getElementById('dropTable');
+        // ステータス表示欄（なければ作成）
+        let statsDiv = document.getElementById('simulationMonsterStats');
+        if (!statsDiv) {
+            statsDiv = document.createElement('div');
+            statsDiv.id = 'simulationMonsterStats';
+            statsDiv.className = 'monster-stats-list';
+            infoDiv.insertBefore(statsDiv, descriptionDiv);
+        }
 
         if (!monster) {
             infoDiv.style.display = 'none';
+            statsDiv.innerHTML = '';
             return;
         }
 
@@ -73,27 +82,53 @@ class UIManager {
         raritySpan.textContent = monster.rarity;
 
         // 説明表示
-        console.log('Monster description:', monster.description); // デバッグ用
         if (monster.description && monster.description.trim()) {
             descriptionDiv.textContent = monster.description;
             descriptionDiv.style.display = 'block';
-            console.log('Description displayed'); // デバッグ用
         } else {
             descriptionDiv.style.display = 'none';
-            console.log('No description'); // デバッグ用
         }
+
+        // ステータス表示（レベルに応じて計算）
+        const statIds = ['hp','mp','attack','defense','speed','luck'];
+        const statLabels = {
+            hp: 'HP', mp: 'MP', attack: '攻撃力', defense: '防御力', speed: '素早さ', luck: '運'
+        };
+        // ステータス初期値
+        const statDefaults = {};
+        if (window.masterManager && window.masterManager.masterConfig.characterStats) {
+            window.masterManager.masterConfig.characterStats.forEach(stat => {
+                statDefaults[stat.id] = stat.defaultValue ?? 0;
+            });
+        }
+        // レベル取得
+        let level = 1;
+        const levelInput = document.getElementById('monsterLevel');
+        if (levelInput) {
+            level = parseInt(levelInput.value, 10);
+            if (isNaN(level) || level < 1) level = 1;
+        }
+        // 計算式: レベル1は基礎値、それ以外は基礎値+(基礎値×レベル×0.8)
+        const getStatValue = (statId, level) => {
+            const base = (monster[statId] !== undefined ? monster[statId] : statDefaults[statId] || 0);
+            if (level === 1) return base;
+            return Math.floor(base + (base * level * 0.8));
+        };
+        statsDiv.innerHTML = statIds.map(id => `<span class="monster-stat"><strong>${statLabels[id]}:</strong> ${getStatValue(id, level)}</span>`).join(' / ');
 
         // ドロップテーブル表示
         dropTableDiv.innerHTML = '';
-        monster.dropItems.forEach(dropItem => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'drop-item';
-            itemDiv.innerHTML = `
-                <span class="drop-item-name">${dropItem.itemName}</span>
-                <span class="drop-item-prob">${this.formatProbability(dropItem.probability)}</span>
-            `;
-            dropTableDiv.appendChild(itemDiv);
-        });
+        if (monster.dropItems && Array.isArray(monster.dropItems)) {
+            monster.dropItems.forEach(dropItem => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'drop-item';
+                itemDiv.innerHTML = `
+                    <span class="drop-item-name">${dropItem.itemName}</span>
+                    <span class="drop-item-prob">${this.formatProbability(dropItem.probability)}</span>
+                `;
+                dropTableDiv.appendChild(itemDiv);
+            });
+        }
     }
 
     // 集計結果表示
@@ -342,16 +377,25 @@ class UIManager {
     // モーダル表示
     showModal(modalId) {
         const modal = document.getElementById(modalId);
-        
         // マスタ情報を使用してセレクトボックスを更新
         if (modalId === 'monsterModal' && window.masterManager) {
             this.updateMonsterModalSelects();
+            // ステータス欄は新規作成時のみ空欄生成（編集時はapp.js側で値入りで呼ぶ）
+            if (typeof window !== 'undefined' && window.app && typeof window.app.generateMonsterStatsFields === 'function') {
+                // 編集モード判定: saveMonsterボタンにeditIdがなければ新規作成
+                const isEdit = document.getElementById('saveMonster').dataset.editId;
+                if (!isEdit) {
+                    console.log('[DEBUG] showModal(monsterModal): generateMonsterStatsFields() called (new)');
+                    window.app.generateMonsterStatsFields();
+                }
+            } else {
+                console.log('[DEBUG] showModal(monsterModal): window.app or generateMonsterStatsFields not found');
+            }
         } else if (modalId === 'itemModal' && window.masterManager) {
             this.updateItemModalSelects();
         } else if (modalId === 'dropModal' && window.masterManager) {
             this.updateDropModalSelects();
         }
-        
         modal.classList.add('show');
     }
 
@@ -431,19 +475,31 @@ class UIManager {
     // モンスター一覧表示
     renderMonsterList(monsters) {
         const container = document.getElementById('monsterListView');
-        
         if (!container) {
             console.error('monsterListView要素が見つかりません');
             return;
         }
-
         if (!monsters || monsters.length === 0) {
             container.innerHTML = '<p class="empty-message">モンスターがありません</p>';
             return;
         }
-
         try {
-            container.innerHTML = monsters.map(monster => {
+            // ステータス項目
+            const statIds = ['hp','mp','attack','defense','speed','luck'];
+            const statLabels = {
+                hp: 'HP', mp: 'MP', attack: '攻撃力', defense: '防御力', speed: '素早さ', luck: '運'
+            };
+
+            // レベル成長値
+            const levelUpConfig = (window.masterManager && window.masterManager.masterConfig.levelUpConfig) || {hp:10,mp:5,attack:1,defense:1,speed:1,luck:1};
+            // ステータス初期値
+            const statDefaults = {};
+            if (window.masterManager && window.masterManager.masterConfig.characterStats) {
+                window.masterManager.masterConfig.characterStats.forEach(stat => {
+                    statDefaults[stat.id] = stat.defaultValue ?? 0;
+                });
+            }
+            container.innerHTML = monsters.map((monster, idx) => {
                 const dropItems = monster.dropItems || [];
                 const dropItemsHtml = dropItems.length > 0 
                     ? dropItems.map(drop => `
@@ -462,6 +518,27 @@ class UIManager {
                     ? `<div class="description-text">${monster.description}</div>`
                     : '';
 
+                // レベル入力欄（初期値1）
+                const levelInputId = `monsterLevelInput_${monster.id || idx}`;
+                // ステータス計算関数（レベル1は基礎値、それ以外は 基礎値+(基礎値×レベル×0.8) の整数値）
+                const getStatValue = (statId, level) => {
+                    const base = (monster[statId] !== undefined ? monster[statId] : statDefaults[statId] || 0);
+                    if (level === 1) return base;
+                    return Math.floor(base + (base * level * 0.8));
+                };
+                // 初期レベル
+                const initialLevel = 1;
+                // ステータス表示
+                const statsHtml = `<div class="monster-stats-list" id="monsterStatsList_${monster.id || idx}">
+                    ${statIds.map(id => `<span class="monster-stat"><strong>${statLabels[id]}:</strong> ${getStatValue(id, initialLevel)}</span>`).join(' / ')}
+                </div>`;
+
+                // レベル入力欄とステータス
+                const levelHtml = `<div class="monster-level-row" style="margin-bottom:8px;">
+                    <label for="${levelInputId}" style="margin-right:6px;">レベル:</label>
+                    <input type="number" id="${levelInputId}" class="monster-level-input" value="1" min="1" style="width:60px;">
+                </div>`;
+
                 return `
                     <div class="monster-card">
                         ${imageHtml}
@@ -474,6 +551,9 @@ class UIManager {
                         </div>
                         ${descriptionHtml}
                         <div class="monster-card-body">
+                            ${levelHtml}
+                            <h4>ステータス</h4>
+                            ${statsHtml}
                             <h4>ドロップテーブル</h4>
                             <div class="drop-items-list">
                                 ${dropItemsHtml}
@@ -493,6 +573,33 @@ class UIManager {
                     </div>
                 `;
             }).join('');
+
+            // レベル変更イベントを追加
+            monsters.forEach((monster, idx) => {
+                const levelInputId = `monsterLevelInput_${monster.id || idx}`;
+                const statsListId = `monsterStatsList_${monster.id || idx}`;
+                const levelInput = document.getElementById(levelInputId);
+                if (levelInput) {
+                    levelInput.addEventListener('input', (e) => {
+                        let level = parseInt(e.target.value, 10);
+                        if (isNaN(level) || level < 1) level = 1;
+                        // 再計算して表示
+                        const statsList = document.getElementById(statsListId);
+                        if (statsList) {
+                            statsList.innerHTML = statIds.map(id => {
+                                const base = (monster[id] !== undefined ? monster[id] : statDefaults[id] || 0);
+                                let value;
+                                if (level === 1) {
+                                    value = base;
+                                } else {
+                                    value = Math.floor(base + (base * level * 0.8));
+                                }
+                                return `<span class=\"monster-stat\"><strong>${statLabels[id]}:</strong> ${value}</span>`;
+                            }).join(' / ');
+                        }
+                    });
+                }
+            });
 
             // イベントリスナー設定
             this.setupMonsterListEvents(monsters);

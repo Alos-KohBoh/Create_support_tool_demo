@@ -49,10 +49,10 @@
                         <button class="main-tab-btn" data-tab="bag">鞄</button>
                     </div>
 
-                <!-- シミュレーションタブ -->
-                <div id="simulation" class="main-tab-content active">
-                    <div class="card">
-                        <h2>シミュレーション設定</h2>
+                    <!-- シミュレーションタブ -->
+                    <div id="simulation" class="main-tab-content active">
+                        <div class="card">
+                            <h2>シミュレーション設定</h2>
                         
                         <div class="form-group">
                             <label for="monsterSelect">モンスター選択</label>
@@ -113,98 +113,103 @@
                                 結果クリア
                             </button>
                         </div>
+                        </div>
                     </div>
-                </div>
 
                     <!-- 鞄タブ -->
                     <div id="bag" class="main-tab-content">
-                    <div class="card">
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label for="bagCharacterSelect">鞄の所有者</label>
-                            <select id="bagCharacterSelect" class="form-control">
-                                <option value="">-- 倉庫（共通） --</option>
-                            </select>
-                        </div>
-                        
-                        <h2 id="bagTitle" style="margin-bottom: 15px;">倉庫</h2>
-                        
-                        <div class="bag-capacity">
-                            <div class="bag-capacity-info">
-                                <div class="capacity-item">
-                                    <label>現在:</label>
-                                    <span id="currentCount" class="capacity-number">0</span>個
+                        <div class="card">
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label for="bagCharacterSelect">鞄の所有者</label>
+                                <select id="bagCharacterSelect" class="form-control">
+                                    <option value="">-- 倉庫（共通） --</option>
+                                </select>
+                            </div>
+                            
+                            <h2 id="bagTitle" style="margin-bottom: 15px;">倉庫</h2>
+                            
+                            <div class="bag-capacity">
+                                <div class="bag-capacity-info">
+                                    <div class="capacity-item">
+                                        <label>現在:</label>
+                                        <span id="currentCount" class="capacity-number">0</span>個
+                                    </div>
+                                    <div class="capacity-item">
+                                        <label>最大:</label>
+                                        <span id="maxCapacity" class="capacity-number">1000</span>個
+                                    </div>
                                 </div>
-                                <div class="capacity-item">
-                                    <label>最大:</label>
-                                    <span id="maxCapacity" class="capacity-number">1000</span>個
+                                <div class="bag-controls">
+                                    <button id="addBagItemBtn" class="btn btn-success">アイテム追加</button>
+                                    <button id="bagSettingsBtn" class="btn btn-secondary">設定</button>
+                                    <button id="clearBagBtn" class="btn btn-danger">クリア</button>
                                 </div>
                             </div>
-                            <div class="bag-controls">
-                                <button id="addBagItemBtn" class="btn btn-success">アイテム追加</button>
-                                <button id="bagSettingsBtn" class="btn btn-secondary">設定</button>
-                                <button id="clearBagBtn" class="btn btn-danger">クリア</button>
-                            </div>
-                        </div>
 
-                        <div id="bagItemsList" class="bag-items-list">
-                            <div class="empty-message">鞄は空です</div>
+                            <div id="bagItemsList" class="bag-items-list">
+                                <div class="empty-message">鞄は空です</div>
+                            </div>
                         </div>
                     </div>
-                </div>
                 </section>
 
                 <!-- 結果表示エリア(シミュレーションタブのみ表示) -->
                 <section class="results-section" id="resultsSection">
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="results">集計結果</button>
-                    <button class="tab-btn" data-tab="expected">期待値</button>
-                    <button class="tab-btn" data-tab="log">ログ</button>
-                    <button class="tab-btn" data-tab="chart">グラフ</button>
-                </div>
-
-                <!-- 集計結果タブ -->
-                <div id="results" class="tab-content active">
-                    <div class="card">
-                        <div class="card-header-with-action">
-                            <h2>集計結果</h2>
-                            <button id="addResultsToBag" class="btn btn-success" style="display: none;">
-                                すべて鞄に入れる
-                            </button>
-                        </div>
-                        <div id="resultsContent" class="results-content">
-                            <p class="empty-message">ガチャを実行してください</p>
-                        </div>
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="results">集計結果</button>
+                        <button class="tab-btn" data-tab="expected">期待値</button>
+                        <button class="tab-btn" data-tab="log">ログ</button>
+                        <button class="tab-btn" data-tab="chart">グラフ</button>
                     </div>
-                </div>
 
-                <!-- 期待値タブ -->
-                <div id="expected" class="tab-content">
-                    <div class="card">
-                        <h2>期待値</h2>
-                        <div id="expectedContent" class="results-content">
-                            <p class="empty-message">期待値を計算してください</p>
+                    <!-- 集計結果タブ -->
+                    <div id="results" class="tab-content active">
+                        <div class="card">
+                            <div class="card-header-with-action">
+                                <h2>集計結果</h2>
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="addExpToCharacter" class="btn btn-info" style="display: none;">
+                                        経験値を獲得
+                                    </button>
+                                    <button id="addResultsToBag" class="btn btn-success" style="display: none;">
+                                        すべて鞄に入れる
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="resultsContent" class="results-content">
+                                <p class="empty-message">ガチャを実行してください</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- ログタブ -->
-                <div id="log" class="tab-content">
-                    <div class="card">
-                        <h2>ガチャログ (最新100件)</h2>
-                        <div id="logContent" class="log-content">
-                            <p class="empty-message">ガチャ履歴がありません</p>
+                    <!-- 期待値タブ -->
+                    <div id="expected" class="tab-content">
+                        <div class="card">
+                            <h2>期待値</h2>
+                            <div id="expectedContent" class="results-content">
+                                <p class="empty-message">期待値を計算してください</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- グラフタブ -->
-                <div id="chart" class="tab-content">
-                    <div class="card">
-                        <h2>ドロップ分布グラフ</h2>
-                        <canvas id="dropChart"></canvas>
+                    <!-- ログタブ -->
+                    <div id="log" class="tab-content">
+                        <div class="card">
+                            <h2>ガチャログ (最新100件)</h2>
+                            <div id="logContent" class="log-content">
+                                <p class="empty-message">ガチャ履歴がありません</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </section>
+
+                    <!-- グラフタブ -->
+                    <div id="chart" class="tab-content">
+                        <div class="card">
+                            <h2>ドロップ分布グラフ</h2>
+                            <canvas id="dropChart"></canvas>
+                        </div>
+                    </div>
+                </section>
             </main>
         </div>
 
@@ -454,6 +459,20 @@
                         <button id="addCharacterStatBtn" class="btn btn-info">
                             ステータス項目を追加
                         </button>
+                    </div>
+
+                    <div class="master-section">
+                        <h3>職業ごとのレベルアップボーナス設定</h3>
+                        <div id="jobBonusesList">
+                            <!-- 動的に生成 -->
+                        </div>
+                    </div>
+
+                    <div class="master-section">
+                        <h3>種族ごとのレベルアップボーナス設定</h3>
+                        <div id="raceBonusesList">
+                            <!-- 動的に生成 -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1078,6 +1097,16 @@
                         <div id="characterStatsFields">
                             <!-- 動的に生成 -->
                         </div>
+                        <div id="bonusPointsSection" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px; display: none;">
+                            <h4>ボーナスポイント振り分け</h4>
+                            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                                <strong>残りポイント: <span id="remainingBonusPoints">0</span></strong>
+                                <button type="button" class="btn btn-warning btn-sm" onclick="app.resetBonusPoints()">リセット</button>
+                            </div>
+                            <div id="bonusAllocationFields">
+                                <!-- 動的に生成 -->
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -1421,36 +1450,48 @@
                 <span class="close">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label for="monsterName">モンスター名</label>
-                    <input type="text" id="monsterName" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="monsterDangerInput">危険度</label>
-                    <select id="monsterDangerInput" class="form-control">
-                        <!-- マスタ管理から動的に生成 -->
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="monsterRarityInput">レア度(モンスター)</label>
-                    <select id="monsterRarityInput" class="form-control">
-                        <!-- マスタ管理から動的に生成 -->
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="monsterImageUrl">画像 (任意)</label>
-                    <div class="image-input-group">
-                        <input type="text" id="monsterImageUrl" class="form-control" placeholder="https://example.com/image.png">
-                        <input type="file" id="monsterImageFile" accept="image/*" style="display: none;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('monsterImageFile').click()">ファイル</button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="app.openMediaLibrary('monsterImageUrl')">ライブラリ</button>
+                <div class="modal-form-columns">
+                    <div class="form-column">
+                        <div class="form-group">
+                            <label for="monsterName">モンスター名</label>
+                            <input type="text" id="monsterName" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="monsterDangerInput">危険度</label>
+                            <select id="monsterDangerInput" class="form-control">
+                                <!-- マスタ管理から動的に生成 -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="monsterRarityInput">レア度(モンスター)</label>
+                            <select id="monsterRarityInput" class="form-control">
+                                <!-- マスタ管理から動的に生成 -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="monsterImageUrl">画像 (任意)</label>
+                            <div class="image-input-group">
+                                <input type="text" id="monsterImageUrl" class="form-control" placeholder="https://example.com/image.png">
+                                <input type="file" id="monsterImageFile" accept="image/*" style="display: none;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('monsterImageFile').click()">ファイル</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="app.openMediaLibrary('monsterImageUrl')">ライブラリ</button>
+                            </div>
+                            <div id="monsterImagePreview" class="image-preview" style="display: none;"></div>
+                            <small class="form-help">URL直接入力、ファイルアップロード、またはメディアライブラリから選択</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="monsterDescription">説明 (任意)</label>
+                            <textarea id="monsterDescription" class="form-control" rows="3" placeholder="モンスターの説明を入力"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="monsterExp">獲得経験値</label>
+                            <input type="number" id="monsterExp" class="form-control" min="0" value="0" placeholder="倒した時に獲得できる経験値">
+                        </div>
                     </div>
-                    <div id="monsterImagePreview" class="image-preview" style="display: none;"></div>
-                    <small class="form-help">URL直接入力、ファイルアップロード、またはメディアライブラリから選択</small>
-                </div>
-                <div class="form-group">
-                    <label for="monsterDescription">説明 (任意)</label>
-                    <textarea id="monsterDescription" class="form-control" rows="3" placeholder="モンスターの説明を入力"></textarea>
+                    <div class="form-column">
+                        <h3>ステータス</h3>
+                        <div id="monsterStatsFields"></div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1529,6 +1570,7 @@
                     <h3>ドロップアイテム設定</h3>
                     <div id="dropItemsList"></div>
                     <button id="addDropItem" class="btn btn-success">➕ ドロップアイテム追加</button>
+                    <button id="createNewItemFromDrop" class="btn btn-info">🆕 新規アイテムを作成して追加</button>
                     <div class="probability-total">
                         合計確率: <span id="totalProbability">0</span>%
                         <span id="probabilityWarning" class="info-message" style="display: none;">

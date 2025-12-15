@@ -1,6 +1,6 @@
 // データモデルクラス
 class Monster {
-    constructor(id, name, dangerLevel, rarity, dropItems = [], imageUrl = '', description = '') {
+    constructor(id, name, dangerLevel, rarity, dropItems = [], imageUrl = '', description = '', exp = 0) {
         this.id = id || this.generateId();
         this.name = name;
         this.dangerLevel = dangerLevel;
@@ -8,6 +8,7 @@ class Monster {
         this.dropItems = dropItems;
         this.imageUrl = imageUrl;
         this.description = description;
+        this.exp = exp || 0; // 経験値を追加
     }
 
     generateId() {

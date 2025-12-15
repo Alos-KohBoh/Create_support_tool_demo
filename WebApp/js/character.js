@@ -1,7 +1,7 @@
 // キャラクタークラス
 class Character {
     constructor(id, name, job = '', race = '', element = '', level = 1, 
-                stats = {}, personality = '', background = '', dialogues = [], skills = [], imageUrl = '', bagItems = {}, tags = [], exp = 0, levelHistory = []) {
+                stats = {}, personality = '', background = '', dialogues = [], skills = [], imageUrl = '', bagItems = {}, tags = [], exp = 0, levelHistory = [], bonusPoints = 0, allocatedBonus = {}) {
         this.id = id;
         this.name = name;
         this.job = job;
@@ -18,18 +18,24 @@ class Character {
         this.bagItems = bagItems; // { itemName: quantity } キャラクター専用鞄
         this.tags = tags || []; // タグ配列
         this.levelHistory = levelHistory || []; // レベルアップ履歴 [{level, stats, timestamp}]
+        this.bonusPoints = bonusPoints || 0; // 未振り分けボーナスポイント
+        this.allocatedBonus = allocatedBonus || {}; // 振り分け済みボーナス {statId: points}
     }
 
     // 経験値を追加してレベルアップをチェック
     addExp(amount) {
         this.exp += amount;
-        const requiredExp = this.getRequiredExpForNextLevel();
+        let leveledUp = false;
         
-        if (this.exp >= requiredExp) {
+        // 複数レベルアップに対応
+        while (this.exp >= this.getRequiredExpForNextLevel()) {
+            const requiredExp = this.getRequiredExpForNextLevel();
+            this.exp -= requiredExp; // 余剰分を次のレベルに繰り越す
             this.levelUp();
-            return true; // レベルアップした
+            leveledUp = true;
         }
-        return false; // レベルアップしなかった
+        
+        return leveledUp; // レベルアップしたかどうか
     }
 
     // 次のレベルに必要な経験値を計算
@@ -40,9 +46,33 @@ class Character {
 
     // レベルアップ処理
     levelUp() {
+        console.log('=== levelUp called ===');
+        console.log('Before levelUp - Level:', this.level, 'Stats:', JSON.stringify(this.stats));
         const oldStats = { ...this.stats };
         this.level++;
-        this.exp = 0; // 経験値リセット（余剰分は破棄）
+        // 注意: expは呼び出し側（addExp）で調整されます
+        
+        // ボーナスポイントを加算
+        this.bonusPoints = (this.bonusPoints || 0) + 5;
+        
+        // マスターデータからレベルアップ設定を取得
+        const masterConfig = JSON.parse(localStorage.getItem('masterConfig') || '{}');
+        const levelUpConfig = masterConfig.levelUpConfig || {};
+        const jobBonuses = masterConfig.jobBonuses || {};
+        const raceBonuses = masterConfig.raceBonuses || {};
+        
+        // 全てのステータスに対してレベルアップ処理を実行
+        Object.keys(this.stats).forEach(statId => {
+            const baseLevelUp = levelUpConfig[statId] || 1;
+            const jobBonus = (jobBonuses[this.job] && jobBonuses[this.job][statId]) || 0;
+            const raceBonus = (raceBonuses[this.race] && raceBonuses[this.race][statId]) || 0;
+            
+            // 基本上昇値 + 職業ボーナス + 種族ボーナス
+            const totalIncrease = baseLevelUp + jobBonus + raceBonus;
+            this.stats[statId] = (this.stats[statId] || 0) + totalIncrease;
+        });
+        
+        console.log('After stats update:', JSON.stringify(this.stats));
         
         // レベルアップ履歴を記録
         this.levelHistory.push({
@@ -51,12 +81,53 @@ class Character {
             newStats: { ...this.stats },
             timestamp: new Date().toISOString()
         });
+        console.log('After levelUp - Level:', this.level, 'Stats:', JSON.stringify(this.stats));
+        console.log('=== levelUp end ===');
+    }
+
+    // 職業ボーナスを取得
+    getJobBonus() {
+        const masterConfig = JSON.parse(localStorage.getItem('masterConfig') || '{}');
+        const jobBonuses = masterConfig.jobBonuses || {};
+        return jobBonuses[this.job] || null;
+    }
+
+    // 種族ボーナスを取得
+    getRaceBonus() {
+        const masterConfig = JSON.parse(localStorage.getItem('masterConfig') || '{}');
+        const raceBonuses = masterConfig.raceBonuses || {};
+        return raceBonuses[this.race] || null;
     }
 
     // 経験値の進捗率を取得（0-100）
     getExpProgress() {
         const required = this.getRequiredExpForNextLevel();
         return Math.floor((this.exp / required) * 100);
+    }
+
+    // ボーナスポイントを振り分ける
+    allocateBonusPoint(statId, points) {
+        if (this.bonusPoints < points) {
+            return false; // ポイント不足
+        }
+
+        // ステータスIDに応じた変換レート
+        const rates = {
+            hp: 10,
+            mp: 5
+        };
+        const rate = rates[statId] || 1;
+
+        // ステータスを加算
+        this.stats[statId] = (this.stats[statId] || 0) + (points * rate);
+        
+        // ボーナスポイントを減算
+        this.bonusPoints -= points;
+        
+        // 振り分け履歴を記録
+        this.allocatedBonus[statId] = (this.allocatedBonus[statId] || 0) + points;
+        
+        return true;
     }
 
     // LocalStorageから読み込み用
@@ -73,7 +144,9 @@ class Character {
             c.bagItems || {},
             c.tags || [],
             c.exp || 0,
-            c.levelHistory || []
+            c.levelHistory || [],
+            c.bonusPoints || 0,
+            c.allocatedBonus || {}
         ));
     }
 
@@ -107,7 +180,13 @@ class CharacterManager {
     updateCharacter(id, updatedData) {
         const index = this.characters.findIndex(c => c.id === id);
         if (index !== -1) {
-            this.characters[index] = { ...this.characters[index], ...updatedData };
+            // Characterオブジェクトの場合はそのまま置き換え
+            if (updatedData instanceof Character) {
+                this.characters[index] = updatedData;
+            } else {
+                // プレーンオブジェクトの場合はプロパティをマージ
+                Object.assign(this.characters[index], updatedData);
+            }
             Character.saveToLocalStorage(this.characters);
         }
     }

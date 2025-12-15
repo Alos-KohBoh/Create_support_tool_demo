@@ -45,9 +45,11 @@ class NavigationManager {
 
         // セクション内のタブをリセットとデータ読み込み
         if (sectionId === 'simulation-section') {
-            this.activateTab('simulation');
+            // シミュレーション画面を開く時にキャラクター選択を更新
+            if (window.app) {
+                window.app.updateSimulationCharacterSelect();
+            }
         } else if (sectionId === 'data-section') {
-            this.activateTab('characters');
             // データ一覧を初期表示
             if (window.app) {
                 window.app.refreshDataLists();

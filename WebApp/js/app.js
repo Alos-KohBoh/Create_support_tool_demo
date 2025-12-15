@@ -1,5 +1,36 @@
 // メインアプリケーション
 class App {
+        // モンスター用ステータス入力欄を生成
+        generateMonsterStatsFields(monster = null) {
+            const container = document.getElementById('monsterStatsFields');
+            if (!container || !window.masterManager) return;
+            const stats = window.masterManager.masterConfig.characterStats || [];
+            container.innerHTML = stats.map(stat => {
+                // 値の優先順位: 編集時の値 > マスタ初期値 > 空
+                let value = '';
+                if (monster && monster[stat.id] !== undefined) {
+                    value = monster[stat.id];
+                } else if (stat.defaultValue !== undefined) {
+                    value = stat.defaultValue;
+                }
+                return `
+                <div class="form-group">
+                    <label for="monsterStat_${stat.id}">${stat.label}</label>
+                    <input 
+                        type="number" 
+                        id="monsterStat_${stat.id}"
+                        name="${stat.id}"
+                        class="form-control monster-stat-input" 
+                        data-stat-id="${stat.id}"
+                        value="${value}"
+                        min="0"
+                        title="${stat.label}"
+                        placeholder="${stat.label}"
+                    >
+                </div>
+                `;
+            }).join('');
+        }
     constructor() {
         // プロジェクトマネージャーを先に初期化
         this.projectManager = new ProjectManager();
@@ -23,6 +54,8 @@ class App {
         this.worldMapManager = new WorldMapManager();
         this.selectedMonster = null;
         this.addedItemsToBAG = new Set(); // 追加済みアイテムを追跡
+        this.lastGachaExp = 0; // 最後のガチャで獲得した経験値
+        this.expAdded = false; // 経験値が追加済みかどうか
         this.editingCharacterId = null;
         this.editingWorkId = null;
         this.editingChapterId = null;
@@ -33,7 +66,13 @@ class App {
         // マスタマネージャー初期化
         masterManager = new MasterDataManager();
         masterUI = new MasterUI(masterManager);
-        
+
+        // グローバル参照を明示的にセット
+        if (typeof window !== 'undefined') {
+            window.app = this;
+            window.masterManager = masterManager;
+        }
+
         this.init();
     }
 
@@ -120,6 +159,13 @@ class App {
             this.uiManager.displayMonsterInfo(this.selectedMonster);
             this.toggleSimulationButtons();
         });
+        // レベル変更時にステータス再表示
+        const monsterLevelInput = document.getElementById('monsterLevel');
+        if (monsterLevelInput) {
+            monsterLevelInput.addEventListener('input', () => {
+                this.uiManager.displayMonsterInfo(this.selectedMonster);
+            });
+        }
 
         // ガチャ開始ボタン
         document.getElementById('runSimulation').addEventListener('click', () => {
@@ -200,6 +246,12 @@ class App {
         const importProjectInput = document.getElementById('importProjectInput');
         if (importProjectInput) {
             importProjectInput.addEventListener('change', (e) => {
+        
+            // window.app, window.masterManagerに明示的にバインド（グローバル参照保証）
+            if (typeof window !== 'undefined') {
+                window.app = this;
+                window.masterManager = masterManager;
+            }
                 this.importProject(e.target.files[0]);
             });
         }
@@ -282,6 +334,13 @@ class App {
             this.addResultsToBag();
         });
 
+        const addExpBtn = document.getElementById('addExpToCharacter');
+        if (addExpBtn) {
+            addExpBtn.addEventListener('click', () => {
+                this.addGachaExpToCharacter();
+            });
+        }
+
         document.getElementById('useBagItem').addEventListener('click', () => {
             this.useItemFromBag();
         });
@@ -346,6 +405,15 @@ class App {
         if (saveCharacterBtn) {
             saveCharacterBtn.addEventListener('click', () => {
                 this.saveCharacter();
+            });
+        }
+
+        // キャラクターレベル変更時の自動計算
+        const characterLevel = document.getElementById('characterLevel');
+        if (characterLevel) {
+            characterLevel.addEventListener('change', () => {
+                this.updateStatsForLevel();
+                this.updateBonusPointsForLevel();
             });
         }
 
@@ -475,6 +543,10 @@ class App {
         // ドロップアイテム追加
         document.getElementById('addDropItem').addEventListener('click', () => {
             this.addDropItemRow();
+        });
+
+        document.getElementById('createNewItemFromDrop').addEventListener('click', () => {
+            this.createNewItemFromDrop();
         });
     }
 
@@ -649,7 +721,10 @@ class App {
                 // .section-screen または .plot-screen のどちらかを親として取得
                 const section = btn.closest('.section-screen') || btn.closest('.plot-screen');
                 
-                if (!section) return;
+                if (!section) {
+                    console.error('Section not found for tab:', tabName);
+                    return;
+                }
 
                 // 同じセクション内のタブボタンとコンテンツを取得
                 const tabBtns = section.querySelectorAll('.main-tab-btn');
@@ -662,12 +737,14 @@ class App {
                     c.style.display = 'none';
                 });
 
-                // 選択されたタブをアクティブ化（document.getElementByIdで直接取得）
+                // 選択されたタブをアクティブ化
                 btn.classList.add('active');
-                const targetContent = document.getElementById(tabName);
+                const targetContent = section.querySelector(`#${tabName}`);
                 if (targetContent) {
                     targetContent.classList.add('active');
                     targetContent.style.display = 'block';
+                } else {
+                    console.error('Target content not found:', tabName);
                 }
 
                 // 世界観タブがクリックされた時に世界観設定を読み込む
@@ -720,12 +797,19 @@ class App {
         });
 
         // 結果タブ（シミュレーション結果表示用）
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        tabBtns.forEach(btn => {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabName = btn.getAttribute('data-tab');
+                const resultsSection = btn.closest('.results-section');
+                
+                if (!resultsSection) {
+                    console.error('Results section not found for tab:', tabName);
+                    return;
+                }
+
+                // 同じ結果セクション内のタブボタンとコンテンツを取得
+                const tabBtns = resultsSection.querySelectorAll('.tab-btn');
+                const tabContents = resultsSection.querySelectorAll('.tab-content');
 
                 // すべてのタブを非アクティブに
                 tabBtns.forEach(b => b.classList.remove('active'));
@@ -733,7 +817,12 @@ class App {
 
                 // 選択されたタブをアクティブに
                 btn.classList.add('active');
-                document.getElementById(tabName).classList.add('active');
+                const targetContent = resultsSection.querySelector(`#${tabName}`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                } else {
+                    console.error('Target content not found:', tabName);
+                }
             });
         });
     }
@@ -913,6 +1002,20 @@ class App {
         this.lastGachaResults = results;
         this.addedItemsToBAG = new Set();
         
+        // 経験値計算：シミュレーション画面で設定したモンスターレベルに応じて変化
+        // レベル1の場合は基礎経験値のみ、レベル2以上は（基礎経験値 × 1.1）× モンスターレベル
+        const baseExp = this.selectedMonster.exp || 0;
+        let totalExp;
+        if (monsterLevel === 1) {
+            // レベル1の場合は基礎経験値をそのまま獲得
+            totalExp = baseExp * trialCount;
+        } else {
+            // レベル2以上の場合は（基礎経験値 × 1.1）× モンスターレベル × 試行回数
+            totalExp = (baseExp * 1.1) * monsterLevel * trialCount;
+        }
+        this.lastGachaExp = Math.floor(totalExp);
+        this.expAdded = false;
+        
         // 結果表示
         this.uiManager.displayResults(stats, trialCount);
         this.uiManager.displayLog(results);
@@ -923,11 +1026,19 @@ class App {
         // グラフ更新
         this.uiManager.displayChart(stats, this.simulator.expectedValues);
 
-        // 鞄に入れるボタンを表示
+        // 鞄に入れるボタンと経験値獲得ボタンを表示
         const addResultsToBagBtn = document.getElementById('addResultsToBag');
         if (addResultsToBagBtn) {
             addResultsToBagBtn.style.display = 'block';
             addResultsToBagBtn.disabled = false;
+            addResultsToBagBtn.textContent = 'すべて鞄に入れる';
+        }
+
+        const addExpBtn = document.getElementById('addExpToCharacter');
+        if (addExpBtn && this.lastGachaExp > 0) {
+            addExpBtn.style.display = 'block';
+            addExpBtn.disabled = false;
+            addExpBtn.textContent = `経験値を獲得 (${this.lastGachaExp})`;
         }
 
         // 集計結果タブに切り替え
@@ -951,6 +1062,8 @@ class App {
         this.uiManager.clearAllResults();
         this.lastGachaResults = null;
         this.addedItemsToBAG = new Set();
+        this.lastGachaExp = 0;
+        this.expAdded = false;
         
         // 鞄に入れるボタンを非表示・リセット
         const addResultsToBagBtn = document.getElementById('addResultsToBag');
@@ -958,6 +1071,13 @@ class App {
             addResultsToBagBtn.style.display = 'none';
             addResultsToBagBtn.disabled = false;
             addResultsToBagBtn.textContent = 'すべて鞄に入れる';
+        }
+
+        // 経験値獲得ボタンを非表示・リセット
+        const addExpBtn = document.getElementById('addExpToCharacter');
+        if (addExpBtn) {
+            addExpBtn.style.display = 'none';
+            addExpBtn.disabled = false;
         }
     }
 
@@ -968,6 +1088,7 @@ class App {
         const rarity = document.getElementById('monsterRarityInput').value;
         const imageUrl = document.getElementById('monsterImageUrl').value.trim();
         const description = document.getElementById('monsterDescription').value.trim();
+        const exp = parseInt(document.getElementById('monsterExp').value) || 0;
         const editId = document.getElementById('saveMonster').dataset.editId;
 
         if (!name) {
@@ -975,6 +1096,13 @@ class App {
             return;
         }
 
+        // ステータス値取得
+        const stats = {};
+        const statIds = ['hp','mp','attack','defense','speed','luck'];
+        statIds.forEach(id => {
+            const input = document.getElementById(`monsterStat_${id}`);
+            stats[id] = input ? parseInt(input.value) || 0 : 0;
+        });
         if (editId) {
             // 編集モード
             const monster = this.dataStorage.getMonsterById(editId);
@@ -984,13 +1112,18 @@ class App {
                 monster.rarity = rarity;
                 monster.imageUrl = imageUrl;
                 monster.description = description;
+                monster.exp = exp;
+                // ステータス反映
+                Object.assign(monster, stats);
                 this.dataStorage.updateMonster(monster);
                 alert('モンスター情報を更新しました');
             }
             delete document.getElementById('saveMonster').dataset.editId;
         } else {
             // 新規追加モード
-            const monster = new Monster(null, name, danger, rarity, [], imageUrl, description);
+            const monster = new Monster(null, name, danger, rarity, [], imageUrl, description, exp);
+            // ステータス反映
+            Object.assign(monster, stats);
             this.dataStorage.addMonster(monster);
             alert('モンスターを追加しました');
         }
@@ -1102,6 +1235,33 @@ class App {
 
         monster.dropItems.push(new DropItem('', 0));
         this.loadDropItemsForMonster(monsterId);
+    }
+
+    // 新規アイテムを作成してドロップに追加
+    createNewItemFromDrop() {
+        const name = prompt('アイテム名を入力してください:');
+        if (!name || !name.trim()) return;
+
+        const type = prompt('種類を入力してください (例: 素材, 装備, 消耗品):');
+        if (!type) return;
+
+        const rarity = prompt('レアリティを入力してください (例: コモン, レア, エピック):');
+        if (!rarity) return;
+
+        // 新規アイテムを作成
+        const item = new Item(null, name.trim(), type.trim(), rarity.trim(), '', '', '');
+        this.dataStorage.addItem(item);
+
+        // ドロップアイテムとして追加
+        const monsterId = document.getElementById('dropMonsterSelect').value;
+        const monster = this.dataStorage.getMonsterById(monsterId);
+        
+        if (monster) {
+            monster.dropItems.push(new DropItem(item.name, 0));
+            this.loadDropItemsForMonster(monsterId);
+        }
+
+        alert(`アイテム「${item.name}」を作成し、ドロップリストに追加しました`);
     }
 
     // ドロップアイテムの更新
@@ -1452,10 +1612,27 @@ class App {
         document.getElementById('monsterRarityInput').value = monster.rarity;
         document.getElementById('monsterImageUrl').value = monster.imageUrl || '';
         document.getElementById('monsterDescription').value = monster.description || '';
-        
+        document.getElementById('monsterExp').value = monster.exp || 0;
+        // ステータス欄も反映
         // 既存モンスターの編集モード
         document.getElementById('saveMonster').dataset.editId = monsterId;
         this.uiManager.showModal('monsterModal');
+        // ステータス欄を値入りで上書き
+        this.generateMonsterStatsFields(monster);
+            // モンスター追加ボタン押下時に必ず空欄生成＋デバッグ
+            const addMonsterBtn = document.getElementById('addMonsterBtn');
+            if (addMonsterBtn) {
+                addMonsterBtn.addEventListener('click', () => {
+                    if (typeof this.generateMonsterStatsFields === 'function') {
+                        console.log('[DEBUG] addMonsterBtn: generateMonsterStatsFields() called');
+                        this.generateMonsterStatsFields();
+                    }
+                });
+            }
+            // 初期化時にも空欄生成
+            if (typeof this.generateMonsterStatsFields === 'function') {
+                this.generateMonsterStatsFields();
+            }
     }
 
     // アイテム編集
@@ -1820,13 +1997,39 @@ class App {
             result => !this.addedItemsToBAG.has(result.itemName)
         );
         
-        if (remainingResults.length === 0) {
-            alert('すべてのアイテムは既に追加済みです');
+        if (remainingResults.length === 0 && this.expAdded) {
+            alert('すべてのアイテムと経験値は既に追加済みです');
             return;
         }
 
-        const result = this.bagManager.addGachaResults(remainingResults);
-        this.updateBagDisplay();
+        let result = { totalAdded: 0, totalOverflow: 0, overflow: {} };
+        if (remainingResults.length > 0) {
+            result = this.bagManager.addGachaResults(remainingResults);
+            this.updateBagDisplay();
+        }
+        
+        // 経験値を加算
+        let expMessage = '';
+        if (!this.expAdded && this.lastGachaExp > 0) {
+            const selectedCharId = document.getElementById('simulationCharacterSelect').value;
+            if (selectedCharId) {
+                const character = this.characterManager.getCharacterById(selectedCharId);
+                if (character) {
+                    const leveledUp = character.addExp(this.lastGachaExp);
+                    this.characterManager.updateCharacter(character.id, character);
+                    expMessage = `\n${character.name}が経験値${this.lastGachaExp}を獲得しました！`;
+                    if (leveledUp) {
+                        expMessage += ` レベルアップ！ (Lv.${character.level})`;
+                    }
+                    this.expAdded = true;
+
+                    // キャラクターリストを更新
+                    if (typeof this.renderCharacterList === 'function') {
+                        this.renderCharacterList();
+                    }
+                }
+            }
+        }
         
         // すべてのアイテムボタンを無効化
         const allButtons = document.querySelectorAll('[id^="addToBag_"]');
@@ -1848,12 +2051,84 @@ class App {
             addResultsToBagBtn.disabled = true;
             addResultsToBagBtn.textContent = '追加済み';
         }
+
+        // 経験値獲得ボタンも無効化（経験値が追加されている場合）
+        if (this.expAdded) {
+            const addExpBtn = document.getElementById('addExpToCharacter');
+            if (addExpBtn) {
+                addExpBtn.disabled = true;
+                addExpBtn.textContent = '獲得済み';
+                addExpBtn.classList.remove('btn-info');
+                addExpBtn.classList.add('btn-secondary');
+            }
+        }
         
         if (result.totalOverflow > 0) {
-            alert(`残りのガチャ結果を鞄に追加しました。\n追加: ${result.totalAdded}個\nあふれ: ${result.totalOverflow}個\n\n容量を超えたアイテム:\n${Object.entries(result.overflow).map(([name, qty]) => `${name}: ${qty}個`).join('\n')}`);
-        } else {
-            alert(`残りのガチャ結果を鞄に追加しました (${result.totalAdded}個)`);
+            alert(`残りのガチャ結果を鞄に追加しました。\n追加: ${result.totalAdded}個\nあふれ: ${result.totalOverflow}個\n\n容量を超えたアイテム:\n${Object.entries(result.overflow).map(([name, qty]) => `${name}: ${qty}個`).join('\n')}${expMessage}`);
+        } else if (result.totalAdded > 0 || expMessage) {
+            alert(`残りのガチャ結果を鞄に追加しました (${result.totalAdded}個)${expMessage}`);
         }
+    }
+
+    // ガチャで獲得した経験値のみを獲得
+    addGachaExpToCharacter() {
+        if (this.expAdded) {
+            alert('経験値は既に獲得済みです');
+            return;
+        }
+
+        if (!this.lastGachaExp || this.lastGachaExp <= 0) {
+            alert('獲得する経験値がありません');
+            return;
+        }
+
+        const selectedCharId = document.getElementById('simulationCharacterSelect').value;
+        
+        if (!selectedCharId) {
+            alert('キャラクターを選択してください');
+            return;
+        }
+
+        let character = this.characterManager.getCharacterById(selectedCharId);
+        
+        if (!character) {
+            alert('キャラクターが見つかりません');
+            return;
+        }
+
+        // Characterインスタンスでない場合は再インスタンス化
+        if (!(character instanceof Character)) {
+            character = new Character(
+                character.id, character.name, character.job, character.race, character.element,
+                character.level, character.stats, character.personality, character.background,
+                character.dialogues, character.skills, character.imageUrl, character.bagItems,
+                character.tags, character.exp, character.levelHistory
+            );
+        }
+
+        const leveledUp = character.addExp(this.lastGachaExp);
+        this.characterManager.updateCharacter(character.id, character);
+        this.expAdded = true;
+
+        // キャラクターリストを更新
+        if (typeof this.renderCharacterList === 'function') {
+            this.renderCharacterList();
+        }
+
+        // ボタンを無効化
+        const addExpBtn = document.getElementById('addExpToCharacter');
+        if (addExpBtn) {
+            addExpBtn.disabled = true;
+            addExpBtn.textContent = '獲得済み';
+            addExpBtn.classList.remove('btn-info');
+            addExpBtn.classList.add('btn-secondary');
+        }
+
+        let message = `${character.name}が経験値${this.lastGachaExp}を獲得しました！`;
+        if (leveledUp) {
+            message += `\nレベルアップしました！ (Lv.${character.level})`;
+        }
+        alert(message);
     }
 
     // 特定のアイテムを鞄に追加
@@ -1907,6 +2182,19 @@ class App {
         
         // ステータスフィールドを生成
         this.generateCharacterStatsFields();
+        
+        // ボーナスポイントUIを初期化
+        this.initializeBonusAllocationUI();
+        
+        // ボーナスポイントセクションを非表示（レベル1なので）
+        const bonusSection = document.getElementById('bonusPointsSection');
+        if (bonusSection) {
+            bonusSection.style.display = 'none';
+        }
+        const remainingPoints = document.getElementById('remainingBonusPoints');
+        if (remainingPoints) {
+            remainingPoints.textContent = '0';
+        }
     }
 
     updateCharacterFormSelects() {
@@ -1965,29 +2253,79 @@ class App {
         // タグを配列に変換
         const tags = tagsText ? tagsText.split(',').map(t => t.trim()).filter(t => t) : [];
 
+        const level = parseInt(document.getElementById('characterLevel').value) || 1;
+        
+        // ステータスをレベルから再計算
+        const masterConfig = JSON.parse(localStorage.getItem('masterConfig') || '{}');
+        const levelUpConfig = masterConfig.levelUpConfig || {};
+        const characterStats = masterConfig.characterStats || [];
+        const jobBonuses = masterConfig.jobBonuses || {};
+        const raceBonuses = masterConfig.raceBonuses || {};
+        
+        const job = document.getElementById('characterJob').value;
+        const race = document.getElementById('characterRace').value;
+        
+        // 基本ステータスを計算
+        const calculatedStats = {};
+        characterStats.forEach(stat => {
+            const baseValue = stat.defaultValue || 0;
+            const levelUpValue = levelUpConfig[stat.id] || 1;
+            const jobBonus = (jobBonuses[job] && jobBonuses[job][stat.id]) || 0;
+            const raceBonus = (raceBonuses[race] && raceBonuses[race][stat.id]) || 0;
+            const totalLevelUpValue = levelUpValue + jobBonus + raceBonus;
+            
+            // レベル×上昇値 + ボーナスポイント
+            const levelUps = level - 1;
+            calculatedStats[stat.id] = baseValue + (totalLevelUpValue * levelUps);
+        });
+        
+        // ボーナスポイントからの加算を適用
+        let allocatedBonus = {};
+        if (this.editingCharacterId) {
+            const existingCharacter = this.characterManager.getCharacter(this.editingCharacterId);
+            allocatedBonus = existingCharacter.allocatedBonus || {};
+        }
+        
+        Object.keys(allocatedBonus).forEach(statId => {
+            const points = allocatedBonus[statId];
+            const rates = { hp: 10, mp: 5 };
+            const rate = rates[statId] || 1;
+            calculatedStats[statId] = (calculatedStats[statId] || 0) + (points * rate);
+        });
+        
         const characterData = {
             name,
-            job: document.getElementById('characterJob').value,
-            race: document.getElementById('characterRace').value,
+            job: job,
+            race: race,
             element: document.getElementById('characterElement').value,
-            level: parseInt(document.getElementById('characterLevel').value) || 1,
-            stats, // 動的ステータス
+            level: level,
+            stats: calculatedStats, // 再計算されたステータス
             personality: document.getElementById('characterPersonality').value.trim(),
             background: document.getElementById('characterBackground').value.trim(),
             dialogues: dialoguesText ? dialoguesText.split('\n').filter(d => d.trim()) : [],
             skills: skillsText ? skillsText.split('\n').filter(s => s.trim()) : [],
             imageUrl: document.getElementById('characterImage').value.trim(),
-            tags: tags
+            tags: tags,
+            allocatedBonus: allocatedBonus
         };
 
         if (this.editingCharacterId) {
             // 編集
+            const existingCharacter = this.characterManager.getCharacter(this.editingCharacterId);
+            // レベルが変更された場合、ボーナスポイントを再計算
+            if (existingCharacter && existingCharacter.level !== level) {
+                const levelDiff = level - existingCharacter.level;
+                characterData.bonusPoints = (existingCharacter.bonusPoints || 0) + (levelDiff * 5);
+            }
             this.characterManager.updateCharacter(this.editingCharacterId, characterData);
         } else {
-            // 新規追加
+            // 新規追加：レベルに応じてボーナスポイントを計算
+            const bonusPoints = (level - 1) * 5;
             const character = {
                 id: this.characterManager.generateId(),
-                ...characterData
+                ...characterData,
+                bonusPoints: bonusPoints,
+                allocatedBonus: {}
             };
             this.characterManager.addCharacter(character);
         }
@@ -1995,6 +2333,7 @@ class App {
         this.uiManager.hideModal('characterModal');
         this.renderCharacterList();
         this.updateCharacterTagFilter(); // タグフィルターを更新
+        this.updateSimulationCharacterSelect(); // シミュレーションのキャラクター選択を更新
     }
 
     renderCharacterList() {
@@ -2052,6 +2391,7 @@ class App {
                             <span class="badge badge-primary">Lv.${character.level}</span>
                         </div>
                         ${expBarHtml}
+                        ${character.bonusPoints > 0 ? `<div class="bonus-points-display"><span class="badge badge-success">ボーナスポイント: ${character.bonusPoints}</span></div>` : ''}
                         <div class="character-stats">
                             ${statsHtml}
                         </div>
@@ -2081,6 +2421,30 @@ class App {
 
         this.editingCharacterId = id;
         
+        console.log('editCharacter - character:', character);
+        console.log('editCharacter - level:', character.level);
+        console.log('editCharacter - bonusPoints before:', character.bonusPoints);
+        
+        // ボーナスポイントの整合性チェック
+        const totalPointsFromLevel = (character.level - 1) * 5;
+        const usedPoints = Object.values(character.allocatedBonus || {}).reduce((sum, val) => sum + val, 0);
+        const expectedBonusPoints = totalPointsFromLevel - usedPoints;
+        
+        console.log('totalPointsFromLevel:', totalPointsFromLevel);
+        console.log('usedPoints:', usedPoints);
+        console.log('expectedBonusPoints:', expectedBonusPoints);
+        
+        // 既存キャラクターにbonusPointsがない、または不整合がある場合は再計算
+        if (character.bonusPoints === undefined || character.bonusPoints === null || 
+            character.bonusPoints !== expectedBonusPoints) {
+            character.bonusPoints = expectedBonusPoints;
+            character.allocatedBonus = character.allocatedBonus || {};
+            console.log('editCharacter - recalculated bonusPoints:', character.bonusPoints);
+            this.characterManager.updateCharacter(character.id, character);
+        }
+        
+        console.log('editCharacter - bonusPoints after:', character.bonusPoints);
+        
         document.getElementById('characterName').value = character.name;
         document.getElementById('characterLevel').value = character.level;
         document.getElementById('characterPersonality').value = character.personality;
@@ -2107,7 +2471,334 @@ class App {
             }
         });
 
+        // ボーナスポイント振り分けUIを表示
+        this.showBonusAllocation(character);
+
         this.uiManager.showModal('characterModal');
+    }
+
+    // ボーナスポイント振り分けUIを初期化
+    initializeBonusAllocationUI() {
+        console.log('initializeBonusAllocationUI called');
+        const allocationFields = document.getElementById('bonusAllocationFields');
+        if (!allocationFields) {
+            console.error('bonusAllocationFields not found');
+            return;
+        }
+
+        const stats = masterManager.masterConfig.characterStats || [];
+        console.log('stats:', stats);
+        let html = '<div class="bonus-allocation-grid">';
+        
+        stats.forEach(stat => {
+            const rates = { hp: 10, mp: 5 };
+            const rate = rates[stat.id] || 1;
+            html += `
+                <div class="bonus-allocation-row">
+                    <label>${stat.label} (+${rate}/pt)</label>
+                    <div class="bonus-controls">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="app.allocateBonus('${stat.id}', -1)">-</button>
+                        <span id="bonus_${stat.id}" class="bonus-value">0</span>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="app.allocateBonus('${stat.id}', 1)">+</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        console.log('Generated HTML length:', html.length);
+        console.log('Generated HTML:', html);
+        allocationFields.innerHTML = html;
+        console.log('allocationFields.innerHTML after set:', allocationFields.innerHTML.substring(0, 200));
+    }
+
+    // ボーナスポイント振り分けUIを表示
+    showBonusAllocation(character) {
+        console.log('=== showBonusAllocation START ===');
+        console.log('character:', character);
+        console.log('character.bonusPoints:', character.bonusPoints);
+        
+        const bonusSection = document.getElementById('bonusPointsSection');
+        const remainingPoints = document.getElementById('remainingBonusPoints');
+        const allocationFields = document.getElementById('bonusAllocationFields');
+
+        console.log('bonusSection found:', !!bonusSection);
+        console.log('remainingPoints found:', !!remainingPoints);
+        console.log('allocationFields found:', !!allocationFields);
+
+        if (!bonusSection || !remainingPoints || !allocationFields) {
+            console.error('Bonus elements not found');
+            return;
+        }
+
+        // UIがまだ生成されていない場合は生成
+        console.log('allocationFields.innerHTML:', allocationFields.innerHTML.length);
+        if (!allocationFields.innerHTML || allocationFields.innerHTML.length < 100) {
+            console.log('Initializing bonus allocation UI...');
+            this.initializeBonusAllocationUI();
+        }
+
+        // ボーナスポイントがない、かつ振り分け済みもない場合
+        const hasAllocated = character.allocatedBonus && Object.keys(character.allocatedBonus).length > 0;
+        const totalPoints = (character.level - 1) * 5; // 総ボーナスポイント
+        
+        console.log('Check bonusPoints:', character.bonusPoints, 'Type:', typeof character.bonusPoints);
+        console.log('hasAllocated:', hasAllocated);
+        console.log('totalPoints:', totalPoints);
+        
+        // レベル1で振り分けもない場合のみ非表示
+        if (totalPoints <= 0 && !hasAllocated) {
+            console.log('Hiding bonus section (level 1, no allocation)');
+            bonusSection.style.display = 'none';
+            return;
+        }
+
+        console.log('Showing bonus section');
+        bonusSection.style.display = 'block';
+        remainingPoints.textContent = character.bonusPoints || 0;
+
+        // 既に割り振られたボーナスを表示に反映
+        console.log('allocatedBonus:', character.allocatedBonus);
+        Object.keys(character.allocatedBonus || {}).forEach(statId => {
+            const bonusDisplay = document.getElementById(`bonus_${statId}`);
+            if (bonusDisplay) {
+                bonusDisplay.textContent = character.allocatedBonus[statId] || 0;
+            }
+        });
+        console.log('=== showBonusAllocation END ===');
+    }
+
+    // ボーナスポイント振り分け処理
+    allocateBonus(statId, points) {
+        let character;
+        
+        if (this.editingCharacterId) {
+            // 編集モード
+            character = this.characterManager.getCharacter(this.editingCharacterId);
+            if (!character) {
+                console.error('Character not found');
+                return;
+            }
+            
+            // Characterインスタンスでない場合は再インスタンス化
+            if (!(character instanceof Character)) {
+                character = new Character(
+                    character.id, character.name, character.job, character.race, character.element,
+                    character.level, character.stats, character.personality, character.background,
+                    character.dialogues, character.skills, character.imageUrl, character.bagItems,
+                    character.tags, character.exp, character.levelHistory,
+                    character.bonusPoints, character.allocatedBonus
+                );
+            }
+        } else {
+            // 新規作成モード：現在の入力値から一時的なキャラクターを作成
+            const level = parseInt(document.getElementById('characterLevel').value) || 1;
+            const bonusPoints = (level - 1) * 5;
+            
+            // 現在のステータスを収集
+            const stats = {};
+            document.querySelectorAll('.character-stat-input').forEach(input => {
+                stats[input.dataset.statId] = parseInt(input.value) || 0;
+            });
+            
+            character = {
+                bonusPoints: bonusPoints,
+                allocatedBonus: {},
+                stats: stats
+            };
+        }
+
+        if (points > 0 && character.bonusPoints < points) {
+            alert('ボーナスポイントが不足しています');
+            return;
+        }
+
+        const bonusDisplay = document.getElementById(`bonus_${statId}`);
+        const currentBonus = parseInt(bonusDisplay.textContent) || 0;
+
+        if (points < 0 && currentBonus <= 0) {
+            return; // これ以上減らせない
+        }
+
+        // ボーナス適用（手動で実装）
+        const rates = { hp: 10, mp: 5 };
+        const rate = rates[statId] || 1;
+        
+        // ステータスを加算
+        character.stats[statId] = (character.stats[statId] || 0) + (points * rate);
+        
+        // ボーナスポイントを減算
+        character.bonusPoints -= points;
+        
+        // 振り分け履歴を記録
+        if (!character.allocatedBonus) character.allocatedBonus = {};
+        character.allocatedBonus[statId] = (character.allocatedBonus[statId] || 0) + points;
+
+        // 表示更新
+        bonusDisplay.textContent = currentBonus + points;
+        document.getElementById('remainingBonusPoints').textContent = character.bonusPoints;
+        
+        // ステータス値更新
+        const statInput = document.getElementById(`characterStat_${statId}`);
+        if (statInput) {
+            statInput.value = character.stats[statId];
+        }
+
+        // キャラクターを保存（編集モードのみ）
+        if (this.editingCharacterId) {
+            this.characterManager.updateCharacter(character.id, character);
+        }
+    }
+
+    // ボーナスポイントをリセット
+    resetBonusPoints() {
+        if (!confirm('ボーナスポイントの振り分けをリセットしますか？')) {
+            return;
+        }
+
+        if (this.editingCharacterId) {
+            const character = this.characterManager.getCharacter(this.editingCharacterId);
+            if (!character) return;
+
+            // レベルから総ボーナスポイントを計算
+            const totalPoints = (character.level - 1) * 5;
+            
+            // ボーナスポイントをリセット
+            character.bonusPoints = totalPoints;
+            character.allocatedBonus = {};
+            
+            // ステータスを再計算
+            const masterConfig = JSON.parse(localStorage.getItem('masterConfig') || '{}');
+            const levelUpConfig = masterConfig.levelUpConfig || {};
+            const characterStats = masterConfig.characterStats || [];
+            const jobBonuses = masterConfig.jobBonuses || {};
+            const raceBonuses = masterConfig.raceBonuses || {};
+            
+            characterStats.forEach(stat => {
+                const baseValue = stat.defaultValue || 0;
+                const levelUpValue = levelUpConfig[stat.id] || 1;
+                const jobBonus = (jobBonuses[character.job] && jobBonuses[character.job][stat.id]) || 0;
+                const raceBonus = (raceBonuses[character.race] && raceBonuses[character.race][stat.id]) || 0;
+                const totalLevelUpValue = levelUpValue + jobBonus + raceBonus;
+                
+                const levelUps = character.level - 1;
+                character.stats[stat.id] = baseValue + (totalLevelUpValue * levelUps);
+            });
+            
+            // 保存
+            this.characterManager.updateCharacter(character.id, character);
+            
+            // UI更新
+            document.getElementById('remainingBonusPoints').textContent = character.bonusPoints;
+            
+            // 振り分け表示をリセット
+            characterStats.forEach(stat => {
+                const bonusDisplay = document.getElementById(`bonus_${stat.id}`);
+                if (bonusDisplay) {
+                    bonusDisplay.textContent = '0';
+                }
+                
+                // ステータス入力値を更新
+                const statInput = document.getElementById(`characterStat_${stat.id}`);
+                if (statInput) {
+                    statInput.value = character.stats[stat.id];
+                }
+            });
+            
+            alert('ボーナスポイントをリセットしました');
+        }
+    }
+
+    // レベル変更時にステータスを自動計算
+    updateStatsForLevel() {
+        const level = parseInt(document.getElementById('characterLevel').value) || 1;
+        
+        // マスターデータからデフォルト値とレベルアップ設定を取得
+        const masterConfig = JSON.parse(localStorage.getItem('masterConfig') || '{}');
+        const levelUpConfig = masterConfig.levelUpConfig || {};
+        const characterStats = masterConfig.characterStats || [];
+        
+        console.log('levelUpConfig:', levelUpConfig);
+        console.log('characterStats:', characterStats);
+        
+        // レベル1からの上昇回数
+        const levelUps = level - 1;
+        
+        // 各ステータスを計算
+        characterStats.forEach(stat => {
+            const baseValue = stat.defaultValue || 0;
+            const levelUpValue = levelUpConfig[stat.id] || 1;
+            const newValue = baseValue + (levelUpValue * levelUps);
+            
+            console.log(`${stat.id}: base=${baseValue}, levelUp=${levelUpValue}, level=${level}, newValue=${newValue}`);
+            
+            const input = document.getElementById(`characterStat_${stat.id}`);
+            if (input) {
+                input.value = newValue;
+            }
+        });
+        
+        // カスタムステータスも処理
+        document.querySelectorAll('.character-stat-input').forEach(input => {
+            const statId = input.dataset.statId;
+            if (!characterStats.find(s => s.id === statId)) {
+                // カスタムステータスはデフォルト+1で計算
+                const levelUpValue = levelUpConfig[statId] || 1;
+                const currentValue = parseInt(input.value) || 0;
+                
+                // 現在のレベルから逆算して基本値を推定
+                if (this.editingCharacterId) {
+                    const character = this.characterManager.getCharacter(this.editingCharacterId);
+                    if (character) {
+                        const oldLevel = character.level;
+                        const oldValue = character.stats[statId] || 0;
+                        const oldLevelUps = oldLevel - 1;
+                        const estimatedBase = oldValue - (levelUpValue * oldLevelUps);
+                        const newValue = estimatedBase + (levelUpValue * levelUps);
+                        input.value = newValue;
+                    }
+                }
+            }
+        });
+    }
+
+    // レベル変更時にボーナスポイントを更新
+    updateBonusPointsForLevel() {
+        const level = parseInt(document.getElementById('characterLevel').value) || 1;
+        const remainingPointsDisplay = document.getElementById('remainingBonusPoints');
+        const bonusSection = document.getElementById('bonusPointsSection');
+        
+        // UIが初期化されていない場合は初期化
+        const allocationFields = document.getElementById('bonusAllocationFields');
+        if (!allocationFields || !allocationFields.innerHTML) {
+            this.initializeBonusAllocationUI();
+        }
+        
+        if (this.editingCharacterId) {
+            // 編集モードの場合は現在のキャラクターから計算
+            const character = this.characterManager.getCharacter(this.editingCharacterId);
+            if (character) {
+                const levelDiff = level - character.level;
+                const newBonusPoints = (character.bonusPoints || 0) + (levelDiff * 5);
+                if (remainingPointsDisplay) {
+                    remainingPointsDisplay.textContent = Math.max(0, newBonusPoints);
+                }
+                if (bonusSection) {
+                    bonusSection.style.display = newBonusPoints > 0 ? 'block' : 'none';
+                }
+            }
+        } else {
+            // 新規作成の場合はレベルから計算
+            const bonusPoints = (level - 1) * 5;
+            if (remainingPointsDisplay) {
+                remainingPointsDisplay.textContent = bonusPoints;
+            }
+            
+            // ボーナスセクションの表示/非表示
+            if (bonusSection) {
+                bonusSection.style.display = bonusPoints > 0 ? 'block' : 'none';
+            }
+        }
     }
 
     deleteCharacter(id) {
@@ -2366,6 +3057,22 @@ class App {
             const option = document.createElement('option');
             option.value = tag;
             option.textContent = tag;
+            select.appendChild(option);
+        });
+    }
+
+    // シミュレーションのキャラクター選択を更新
+    updateSimulationCharacterSelect() {
+        const select = document.getElementById('simulationCharacterSelect');
+        if (!select) return;
+
+        const characters = this.characterManager.getAllCharacters();
+        
+        select.innerHTML = '<option value="">-- 倉庫（共通） --</option>';
+        characters.forEach(character => {
+            const option = document.createElement('option');
+            option.value = character.id;
+            option.textContent = `${character.name} (Lv.${character.level})`;
             select.appendChild(option);
         });
     }
