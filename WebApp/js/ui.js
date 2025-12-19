@@ -6,8 +6,10 @@ class UIManager {
 
     // 確率を見やすく表示する
     formatProbability(probability) {
+        if (!probability || probability <= 0) {
+            return '—';
+        }
         const percent = probability * 100;
-        
         if (percent >= 10) {
             // 10%以上: 1桁表示
             return `${percent.toFixed(1)}%`;
@@ -380,21 +382,23 @@ class UIManager {
         // マスタ情報を使用してセレクトボックスを更新
         if (modalId === 'monsterModal' && window.masterManager) {
             this.updateMonsterModalSelects();
-            // ステータス欄は新規作成時のみ空欄生成（編集時はapp.js側で値入りで呼ぶ）
             if (typeof window !== 'undefined' && window.app && typeof window.app.generateMonsterStatsFields === 'function') {
-                // 編集モード判定: saveMonsterボタンにeditIdがなければ新規作成
                 const isEdit = document.getElementById('saveMonster').dataset.editId;
                 if (!isEdit) {
-                    console.log('[DEBUG] showModal(monsterModal): generateMonsterStatsFields() called (new)');
                     window.app.generateMonsterStatsFields();
                 }
-            } else {
-                console.log('[DEBUG] showModal(monsterModal): window.app or generateMonsterStatsFields not found');
             }
         } else if (modalId === 'itemModal' && window.masterManager) {
             this.updateItemModalSelects();
+            // itemModal表示時はdropModalがshowならmodal-blockedを付与
+            const dropModal = document.getElementById('dropModal');
+            if (dropModal && dropModal.classList.contains('show')) {
+                dropModal.classList.add('modal-blocked');
+            }
         } else if (modalId === 'dropModal' && window.masterManager) {
             this.updateDropModalSelects();
+            // dropModalを開くときはmodal-blockedを必ず外す
+            modal.classList.remove('modal-blocked');
         }
         modal.classList.add('show');
     }
@@ -455,6 +459,13 @@ class UIManager {
     hideModal(modalId) {
         const modal = document.getElementById(modalId);
         modal.classList.remove('show');
+        // itemModalを閉じたときはdropModalのmodal-blockedを必ず外す
+        if (modalId === 'itemModal') {
+            const dropModal = document.getElementById('dropModal');
+            if (dropModal) {
+                dropModal.classList.remove('modal-blocked');
+            }
+        }
     }
 
     // 全結果クリア
@@ -547,6 +558,20 @@ class UIManager {
                     <input type="number" id="${levelInputId}" class="monster-level-input" value="1" min="1" style="width:60px;">
                 </div>`;
 
+                // スキル名リストを取得
+                let skillNames = [];
+                if (Array.isArray(monster.skills) && monster.skills.length > 0 && window.app && app.dataStorage && typeof app.dataStorage.getAllSkills === 'function') {
+                    const allSkills = app.dataStorage.getAllSkills();
+                    monster.skills.forEach(id => {
+                        if (!id) return;
+                        const skill = allSkills.find(s => s.id === id);
+                        if (skill && skill.name) {
+                            skillNames.push(skill.name);
+                        } else if (typeof id === 'string' && id.trim() !== '') {
+                            skillNames.push(id); // 自由記述や旧データ
+                        }
+                    });
+                }
                 return `
                     <div class="monster-card">
                         ${imageHtml}
@@ -562,6 +587,7 @@ class UIManager {
                             ${levelHtml}
                             <h4>ステータス</h4>
                             ${statsHtml}
+                            <p class="monster-skills"><strong>スキル:</strong> ${skillNames.length > 0 ? skillNames.join(', ') : 'なし'}</p>
                             <h4>ドロップテーブル</h4>
                             <div class="drop-items-list">
                                 ${dropItemsHtml}
@@ -681,7 +707,9 @@ class UIManager {
     setupMonsterListEvents(monsters) {
         // ドロップ編集
         document.querySelectorAll('.edit-monster-drops').forEach(btn => {
+            btn.style.outline = '2px solid #00f'; // デバッグ用
             btn.addEventListener('click', (e) => {
+                console.log('[ui.js] ドロップ編集ボタン押下: ', e.target.getAttribute('data-monster-id'));
                 const monsterId = e.target.getAttribute('data-monster-id');
                 if (window.app) {
                     window.app.openDropManagementForMonster(monsterId);
@@ -691,7 +719,9 @@ class UIManager {
 
         // モンスター編集
         document.querySelectorAll('.edit-monster').forEach(btn => {
+            btn.style.outline = '2px solid #0a0'; // デバッグ用
             btn.addEventListener('click', (e) => {
+                console.log('[ui.js] 編集ボタン押下: ', e.target.getAttribute('data-monster-id'));
                 const monsterId = e.target.getAttribute('data-monster-id');
                 if (window.app) {
                     window.app.editMonster(monsterId);
@@ -701,7 +731,9 @@ class UIManager {
 
         // モンスター削除
         document.querySelectorAll('.delete-monster').forEach(btn => {
+            btn.style.outline = '2px solid #a00'; // デバッグ用
             btn.addEventListener('click', (e) => {
+                console.log('[ui.js] 削除ボタン押下: ', e.target.getAttribute('data-monster-id'));
                 const monsterId = e.target.getAttribute('data-monster-id');
                 const monster = monsters.find(m => m.id === monsterId);
                 if (monster && confirm(`${monster.name}を削除しますか？`)) {

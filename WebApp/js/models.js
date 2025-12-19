@@ -55,19 +55,42 @@ class DropResult {
     }
 }
 
+// スキルクラス
+class Skill {
+    constructor(id, name, costType = '', costValue = 0, target = '', description = '', parentId = '', childIds = []) {
+        this.id = id || this.generateId();
+        this.name = name;
+        this.costType = costType; // 消費項目（例: MP, アイテム, 回数など）
+        this.costValue = costValue; // 消費値
+        this.target = target; // 対象（単体/全体/自分/味方/敵など）
+        this.description = description;
+        this.parentId = parentId || '';
+        this.childIds = Array.isArray(childIds) ? childIds : [];
+    }
+    generateId() {
+        return 'skill_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+}
+
 // データストレージクラス
 class DataStorage {
     constructor(projectManager = null) {
         this.projectManager = projectManager;
         this.monsters = [];
         this.items = [];
+        this.skills = [];
+        // 既存データ読込
+        this.loadSkillsFromLocalStorage();
         this.loadFromLocalStorage();
-        
         // 初回起動時にサンプルデータを追加
-        if (this.monsters.length === 0) {
+        if (this.monsters.length === 0 || this.items.length === 0) {
             this.initSampleData();
         }
+        if (this.skills.length === 0) {
+            this.initSampleSkills();
+        }
     }
+
 
     // localStorageキーのプレフィックスを取得
     getKeyPrefix() {
@@ -75,6 +98,113 @@ class DataStorage {
             return this.projectManager.getProjectDataPrefix(this.projectManager.currentProjectId);
         }
         return 'rpg_';
+    }
+
+    // 一意ID生成
+    generateId(prefix = 'skill') {
+        return prefix + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // スキル初期データ
+    initSampleSkills() {
+        const fire = new Skill(this.generateId(), 'ファイア', 'MP', 5, '敵単体', '小さな火球で攻撃する');
+        const heal = new Skill(this.generateId(), 'ヒール', 'MP', 4, '味方単体', '味方1人のHPを小回復');
+        this.skills = [fire, heal];
+        this.saveSkillsToLocalStorage();
+    }
+
+
+    // スキル追加
+    addSkill(skill) {
+        if (!skill.id) skill.id = this.generateId();
+        this.skills.push(skill);
+        // 親スキルがあれば親のchildIdsに追加
+        if (skill.parentId) {
+            const parent = this.skills.find(s => s.id === skill.parentId);
+            if (parent && !parent.childIds.includes(skill.id)) {
+                parent.childIds.push(skill.id);
+            }
+        }
+        this.saveSkillsToLocalStorage();
+    }
+
+    // スキル更新
+    updateSkill(skill) {
+        const idx = this.skills.findIndex(s => s.id === skill.id);
+        if (idx !== -1) {
+            // 親子関係の更新
+            const oldParentId = this.skills[idx].parentId;
+            if (oldParentId && oldParentId !== skill.parentId) {
+                // 古い親から子IDを削除
+                const oldParent = this.skills.find(s => s.id === oldParentId);
+                if (oldParent) {
+                    oldParent.childIds = oldParent.childIds.filter(cid => cid !== skill.id);
+                }
+            }
+            if (skill.parentId) {
+                const newParent = this.skills.find(s => s.id === skill.parentId);
+                if (newParent && !newParent.childIds.includes(skill.id)) {
+                    newParent.childIds.push(skill.id);
+                }
+            }
+            this.skills[idx] = skill;
+            this.saveSkillsToLocalStorage();
+        }
+    }
+
+    // スキル削除
+    deleteSkill(skillId) {
+        // 親のchildIdsからも削除
+        const skill = this.skills.find(s => s.id === skillId);
+        if (skill && skill.parentId) {
+            const parent = this.skills.find(s => s.id === skill.parentId);
+            if (parent) {
+                parent.childIds = parent.childIds.filter(cid => cid !== skillId);
+            }
+        }
+        // 子スキルの親IDもクリア
+        if (skill && skill.childIds && skill.childIds.length > 0) {
+            skill.childIds.forEach(cid => {
+                const child = this.skills.find(s => s.id === cid);
+                if (child) child.parentId = '';
+            });
+        }
+        this.skills = this.skills.filter(s => s.id !== skillId);
+        this.saveSkillsToLocalStorage();
+    }
+
+    // スキル全取得
+    getAllSkills() {
+        return this.skills;
+    }
+
+    // スキル保存
+    saveSkillsToLocalStorage() {
+        try {
+            localStorage.setItem(this.getStorageKey('skills'), JSON.stringify(this.skills));
+        } catch (e) {
+            console.error('スキル保存エラー:', e);
+        }
+    }
+
+    // スキル読込
+    loadSkillsFromLocalStorage() {
+        try {
+            const skillsData = localStorage.getItem(this.getStorageKey('skills'));
+            if (skillsData) {
+                const parsed = JSON.parse(skillsData);
+                this.skills = parsed.map(s => {
+                    // IDがなければ生成
+                    if (!s.id) s.id = this.generateId();
+                    return new Skill(
+                        s.id, s.name, s.costType, s.costValue, s.target, s.description,
+                        s.parentId || '', s.childIds || []
+                    );
+                });
+            }
+        } catch (e) {
+            console.error('スキル読込エラー:', e);
+        }
     }
 
     // キーを生成

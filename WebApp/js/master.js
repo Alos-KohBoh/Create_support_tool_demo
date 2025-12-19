@@ -8,8 +8,20 @@ class MasterDataManager {
     // マスタ設定を読み込み
     loadMasterConfig() {
         const saved = localStorage.getItem('masterConfig');
+        let config;
         if (saved) {
-            const config = JSON.parse(saved);
+            try {
+                config = JSON.parse(saved);
+            } catch (e) {
+                // パース失敗時は初期化
+                config = null;
+            }
+            // 必須フィールドがなければ初期化
+            if (!config || typeof config !== 'object' || !Array.isArray(config.characterStats) || !config.levelUpConfig) {
+                config = null;
+            }
+        }
+        if (config) {
             // 新規追加項目のデフォルト値を設定
             if (!config.jobBonuses) config.jobBonuses = {};
             if (!config.raceBonuses) config.raceBonuses = {};
@@ -64,7 +76,7 @@ class MasterDataManager {
             monsterRarities: ['☆', '★', '★★', '★★★', '★★★★', '★★★★★', '★★★★★★'],
             itemRarities: ['コモン', 'アンコモン', 'レア', 'エピック', 'レジェンド', 'ミシック', 'イモータル', 'レガリア', 'ディヴァイン'],
             dangerLevels: ['極低', '低', '中', '高', '極高'],
-            itemTypes: ['消耗品', '素材', '装備', 'カード', 'その他'],
+            itemTypes: ['消耗品', '素材', '装備', 'カード', 'スキルオーブ', 'その他'],
             jobBonuses: {},
             raceBonuses: {},
             levelUpConfig: {
@@ -339,6 +351,25 @@ class MasterDataManager {
 
 // マスタ管理UI
 class MasterUI {
+        // 成長値編集UIを描画
+        renderLevelUpConfig() {
+            const levelUpConfig = this.masterManager.masterConfig.levelUpConfig || {};
+            const stats = this.masterManager.masterConfig.characterStats || [];
+            // 共通成長値のみ表示
+            const levelUpDiv = document.getElementById('levelUpConfigFields');
+            if (levelUpDiv) {
+                let html = '<h4>共通成長値</h4>';
+                html += '<div class="levelup-fields-row">';
+                stats.forEach(stat => {
+                    html += `<div class="form-group" style="display:inline-block;margin-right:10px;">
+                        <label>${stat.label}</label>
+                        <input type="number" class="form-control" name="levelUp_${stat.id}" value="${levelUpConfig[stat.id] ?? 1}" style="width:70px;display:block;">
+                    </div>`;
+                });
+                html += '</div>';
+                levelUpDiv.innerHTML = html;
+            }
+        }
     constructor(masterManager) {
         this.masterManager = masterManager;
         this.initializeEventListeners();
@@ -409,10 +440,11 @@ class MasterUI {
         this.renderCharacterStats();
         this.renderJobBonuses();
         this.renderRaceBonuses();
-        
+        this.renderLevelUpConfig();
         // ドラッグ&ドロップイベントを設定
         this.setupDragAndDrop();
     }
+
 
     setupDragAndDrop() {
         // モンスター項目

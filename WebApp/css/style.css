@@ -1,4 +1,37 @@
+.data-card-image,
+.monster-card img,
+.card-image img {
+    max-width: 120px;
+    max-height: 120px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+/* キャラクター追加・編集モーダルも前面・半透明背景で */
+#characterModal.modal {
+    z-index: 1100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.3s;
+}
+/* itemModal表示中はdropModalを操作不可に */
+#dropModal.modal.modal-blocked {
+    pointer-events: none !important;
+    filter: blur(2px) grayscale(0.2) opacity(0.7);
+    z-index: 1000 !important;
+}
+
+/* dropModalがmodal-blockedのときでも他のUIやモーダルは操作可能にする */
+#dropModal.modal.modal-blocked ~ * {
+    pointer-events: auto !important;
+}
 :root {
+         z-index: 1200;
     --primary-color: #0078d4;
     --primary-hover: #106ebe;
     --secondary-color: #605e5c;
@@ -342,34 +375,88 @@ textarea.form-control {
     box-shadow: 0 0 0 1px var(--primary-color);
 }
 
+/* ボタンデザインをより自然に */
+/* ボタンデザインをより自然に */
 .btn {
-    padding: 8px 16px;
+    padding: 8px 18px;
     border: 1px solid var(--input-border);
-    border-radius: 4px;
-    font-size: 0.9em;
+    border-radius: 6px;
+    font-size: 1em;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s ease;
-    flex: 1;
+    transition: background 0.15s, border 0.15s, color 0.15s, box-shadow 0.15s;
     min-width: 100px;
     font-family: 'Segoe UI', sans-serif;
     background: var(--card-bg);
     color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    outline: none;
+    appearance: none;
 }
 
-.btn:hover {
+/* バリエーションボタンのデフォルト状態を明示的に上書き */
+.btn-primary {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    border-color: var(--primary-color) !important;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+    color: #fff !important;
+}
+.btn-secondary {
+    background: var(--secondary-color) !important;
+    color: #fff !important;
+    border-color: var(--secondary-color) !important;
+}
+.btn-secondary:hover, .btn-secondary:focus {
+    background: #797775 !important;
+    border-color: #797775 !important;
+    color: #fff !important;
+}
+.btn-danger {
+    background: var(--danger-color) !important;
+    color: #fff !important;
+    border-color: var(--danger-color) !important;
+}
+.btn-danger:hover, .btn-danger:focus {
+    background: #a4262c !important;
+    border-color: #a4262c !important;
+    color: #fff !important;
+}
+.btn-success {
+    background: var(--success-color) !important;
+    color: #fff !important;
+    border-color: var(--success-color) !important;
+}
+.btn-success:hover, .btn-success:focus {
+    background: #0b6a0b !important;
+    border-color: #0b6a0b !important;
+    color: #fff !important;
+}
+
+.btn:hover, .btn:focus {
     background: var(--card-hover);
-    border-color: var(--text-secondary);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.10);
 }
 
 .btn:active {
+    background: var(--primary-hover);
+    color: #fff;
+    border-color: var(--primary-hover);
+    box-shadow: 0 1px 4px rgba(0, 120, 212, 0.15);
     transform: scale(0.98);
 }
 
 .btn:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     cursor: not-allowed;
     background: var(--border-color);
+    color: var(--text-secondary);
+    box-shadow: none;
 }
 
 .btn-primary {
@@ -796,6 +883,45 @@ textarea.form-control {
     display: none;
     position: fixed;
     z-index: 1000;
+}
+
+
+/* ドロップ設定モーダルは標準 */
+#dropModal.modal {
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.3s;
+}
+
+/* アイテム追加モーダルはドロップより前面 */
+#itemModal.modal {
+    z-index: 1100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.3s;
+}
+
+/* モンスター追加・編集モーダルも前面・半透明背景で */
+#monsterModal.modal {
+    z-index: 1100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.3s;
+}
+
+/* スキル追加モーダルは最前面 */
+#skillModal.modal {
+    z-index: 1400 !important;
     left: 0;
     top: 0;
     width: 100%;
@@ -3866,7 +3992,7 @@ input[type="range"] {
         width: 100%;
     }
 }
-/* �{�[�i�X�e�[�u�� */
+/* �{�[�i�X�e�[�u�� */
 .bonus-table-container {
     overflow-x: auto;
     margin: 20px 0;
@@ -3923,7 +4049,7 @@ input[type="range"] {
     box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.1);
 }
 
-/* �{�[�i�X�|�C���g�\�� */
+/* �{�[�i�X�|�C���g�\�� */
 .bonus-points-display {
     margin: 10px 0;
 }

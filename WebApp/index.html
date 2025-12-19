@@ -1,3 +1,49 @@
+    <!-- スキル追加・編集モーダル -->
+    <div id="skillModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="skillModalTitle">スキル追加</h2>
+            </div>
+            <div class="modal-body">
+                <form id="skillForm">
+                    <input type="hidden" id="skillId">
+                    <div class="form-group">
+                        <label for="skillName">スキル名</label>
+                        <input type="text" id="skillName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="skillCostType">消費項目</label>
+                        <select id="skillCostTypeSelect" class="form-control" style="margin-bottom:4px;"></select>
+                        <input type="text" id="skillCostTypeFree" class="form-control" placeholder="自由記述（例: アイテム, 回数など）">
+                        <small class="form-help">上のリストから選択、または自由記述（両方入力時はリスト優先）</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="skillParentSelect">親スキル</label>
+                        <select id="skillParentSelect" class="form-control">
+                            <option value="">-- 親スキルなし --</option>
+                        </select>
+                        <small class="form-help">このスキルの親となるスキルを選択（任意）</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="skillCostValue">消費値</label>
+                        <input type="number" id="skillCostValue" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="skillTarget">対象</label>
+                        <input type="text" id="skillTarget" class="form-control" placeholder="単体/全体/自分/味方/敵など">
+                    </div>
+                    <div class="form-group">
+                        <label for="skillDescription">説明</label>
+                        <textarea id="skillDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="saveSkillBtn" class="btn btn-primary">保存</button>
+                <button class="btn btn-secondary close-modal">キャンセル</button>
+            </div>
+        </div>
+    </div>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -125,9 +171,17 @@
                                     <option value="">-- 倉庫（共通） --</option>
                                 </select>
                             </div>
-                            
+
+                            <!-- フィルターUI追加 -->
+                            <div class="filter-bar" style="margin-bottom: 10px; display: flex; gap: 8px; align-items: flex-end;">
+                                <input type="text" id="bagItemNameFilter" class="filter-input" placeholder="アイテム名で検索..." style="width: 160px;">
+                                <select id="bagItemTypeFilter" class="filter-select" style="width: 120px;"><option value="">種類: すべて</option></select>
+                                <select id="bagItemRarityFilter" class="filter-select" style="width: 120px;"><option value="">レア度: すべて</option></select>
+                                <button id="clearBagItemFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
+                            </div>
+
                             <h2 id="bagTitle" style="margin-bottom: 15px;">倉庫</h2>
-                            
+
                             <div class="bag-capacity">
                                 <div class="bag-capacity-info">
                                     <div class="capacity-item">
@@ -215,6 +269,28 @@
 
         <!-- データ作成・管理セクション -->
         <div id="data-section" class="section-screen" style="display: none;">
+                        <!-- データエクスポートUI -->
+                        <div class="export-bar" style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
+                            <label>エクスポート対象:
+                                <select id="exportDataTarget" class="form-control" style="width:auto; display:inline-block;">
+                                    <option value="characters">キャラクター</option>
+                                    <option value="monsters">モンスター</option>
+                                    <option value="items">アイテム</option>
+                                    <option value="all">全て</option>
+                                </select>
+                            </label>
+                            <label>形式:
+                                <select id="exportDataFormat" class="form-control" style="width:auto; display:inline-block;">
+                                    <option value="text">テキスト</option>
+                                    <option value="csv">CSV</option>
+                                    <option value="md">Markdown</option>
+                                </select>
+                            </label>
+                            <button id="exportDataBtn" class="btn btn-primary">出力</button>
+                            <button id="copyExportDataBtn" class="btn btn-secondary">コピー</button>
+                            <button id="saveExportDataBtn" class="btn btn-info">ファイル保存</button>
+                        </div>
+                        <div id="exportDataPreview" style="white-space:pre; background:#f8f8f8; border:1px solid #ccc; padding:10px; margin-bottom:20px; max-height:300px; overflow:auto; display:none;"></div>
             <div class="section-header">
                 <button class="btn-back" data-back="home">← ホームに戻る</button>
                 <h2>データ作成・管理</h2>
@@ -224,9 +300,22 @@
             <div class="main-tabs">
                 <button class="main-tab-btn active" data-tab="characters">キャラクター</button>
                 <button class="main-tab-btn" data-tab="monsters">モンスター</button>
+                <button class="main-tab-btn" data-tab="skills">スキル</button>
                 <button class="main-tab-btn" data-tab="items">アイテム</button>
                 <button class="main-tab-btn" data-tab="master">マスタ設定</button>
                 <button class="main-tab-btn" data-tab="system">システム</button>
+                        <!-- スキルタブ -->
+                        <div id="skills" class="main-tab-content" style="display: none;">
+                            <div class="card">
+                                <div class="list-header">
+                                    <h2>スキル一覧</h2>
+                                    <button id="addSkillBtn" class="btn btn-success">スキル追加</button>
+                                </div>
+                                <div id="skillListView" class="data-list-view">
+                                    <!-- スキル一覧を動的に生成 -->
+                                </div>
+                            </div>
+                        </div>
             </div>
 
             <!-- キャラクタータブ（新規） -->
@@ -274,7 +363,7 @@
             </div>
 
             <!-- モンスタータブ -->
-            <div id="monsters" class="main-tab-content">
+            <div id="monsters" class="main-tab-content" style="display: none;">
                 <div class="card">
                     <div class="list-header">
                         <h2>モンスター一覧</h2>
@@ -302,7 +391,7 @@
             </div>
 
             <!-- アイテムタブ -->
-            <div id="items" class="main-tab-content">
+            <div id="items" class="main-tab-content" style="display: none;">
                 <div class="card">
                     <div class="list-header">
                         <h2>アイテム一覧</h2>
@@ -330,7 +419,7 @@
             </div>
 
             <!-- マスタ設定タブ -->
-            <div id="master" class="main-tab-content">
+            <div id="master" class="main-tab-content" style="display: none;">
                 <div class="card">
                     <h2>マスタ情報管理</h2>
                     
@@ -461,6 +550,15 @@
                         </button>
                     </div>
 
+                    <!-- 成長値設定 -->
+                    <div class="master-section">
+                        <h3>成長値（レベルアップ時の増加量）設定</h3>
+                        <form id="levelUpConfigForm">
+                            <div id="levelUpConfigFields"></div>
+                            <button type="submit" class="btn btn-primary">成長値を保存</button>
+                        </form>
+                    </div>
+
                     <div class="master-section">
                         <h3>職業ごとのレベルアップボーナス設定</h3>
                         <div id="jobBonusesList">
@@ -478,7 +576,7 @@
             </div>
 
             <!-- システムタブ -->
-            <div id="system" class="main-tab-content">
+            <div id="system" class="main-tab-content" style="display: none;">
                 <div class="card">
                     <h2>システム</h2>
                     
@@ -1122,8 +1220,13 @@
                     <textarea id="characterDialogues" class="form-control" rows="4" placeholder="セリフ1&#10;セリフ2&#10;セリフ3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="characterSkills">スキル/特技 (改行で区切る)</label>
-                    <textarea id="characterSkills" class="form-control" rows="3" placeholder="ファイアボール&#10;回復魔法&#10;剣術"></textarea>
+                    <label>スキル/特技</label>
+                    <div style="display:flex;gap:4px;align-items:center;">
+                        <select id="characterSkillSelect" class="form-control" style="max-width:200px;"></select>
+                        <button id="addCharacterSkillBtn" class="btn btn-primary btn-sm">追加</button>
+                        <button id="addCharacterSkillFreeBtn" class="btn btn-secondary btn-sm">新規追加</button>
+                    </div>
+                    <div id="characterSkillList" style="margin-top:8px;"></div>
                 </div>
                 <div class="form-group">
                     <label for="characterTags">タグ (カンマで区切る)</label>
@@ -1491,6 +1594,15 @@
                     <div class="form-column">
                         <h3>ステータス</h3>
                         <div id="monsterStatsFields"></div>
+                        <h3 style="margin-top:24px;">スキル</h3>
+                        <div class="form-group">
+                            <select id="monsterSkillSelect" class="form-control" style="margin-bottom:4px;"></select>
+                            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                                <button id="addMonsterSkillBtn" type="button" class="btn btn-info">追加</button>
+                                <button id="addMonsterSkillFreeBtn" type="button" class="btn btn-secondary">新規追加</button>
+                            </div>
+                            <ul id="monsterSkillsList" style="margin:0; padding-left:1.2em;"></ul>
+                        </div>
                     </div>
                 </div>
             </div>

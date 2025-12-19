@@ -57,16 +57,19 @@ class Character {
         
         // マスターデータからレベルアップ設定を取得
         const masterConfig = JSON.parse(localStorage.getItem('masterConfig') || '{}');
-        const levelUpConfig = masterConfig.levelUpConfig || {};
+        // キャラクター用の基本上昇値を優先
+        const charLevelUpConfig = masterConfig.LevelUpConfig || {};
         const jobBonuses = masterConfig.jobBonuses || {};
         const raceBonuses = masterConfig.raceBonuses || {};
-        
+
         // 全てのステータスに対してレベルアップ処理を実行
         Object.keys(this.stats).forEach(statId => {
-            const baseLevelUp = levelUpConfig[statId] || 1;
+            
+            const baseLevelUp = (charLevelUpConfig[statId] !== undefined)
+                ? charLevelUpConfig[statId]
+                : (masterConfig.levelUpConfig && masterConfig.levelUpConfig[statId]) || 1;
             const jobBonus = (jobBonuses[this.job] && jobBonuses[this.job][statId]) || 0;
             const raceBonus = (raceBonuses[this.race] && raceBonuses[this.race][statId]) || 0;
-            
             // 基本上昇値 + 職業ボーナス + 種族ボーナス
             const totalIncrease = baseLevelUp + jobBonus + raceBonus;
             this.stats[statId] = (this.stats[statId] || 0) + totalIncrease;
