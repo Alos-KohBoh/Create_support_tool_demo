@@ -1,3 +1,42 @@
+/* マスタ画面の上下ボタン（↑↓）を2/3の高さに調整 */
+.btn-sm {
+    height: 22px !important; /* 通常32pxの2/3程度 */
+    padding-top: 0;
+    padding-bottom: 0;
+    font-size: 0.98em;
+    line-height: 1.1;
+}
+/* データエクスポートバーのスマホ対応・ボタン縮小 */
+.export-bar {
+        flex-wrap: wrap;
+        gap: 8px;
+}
+.export-bar label {
+        margin-bottom: 0;
+        font-size: 0.98em;
+}
+.export-bar .btn {
+        min-width: 64px;
+        padding: 6px 10px;
+        font-size: 0.98em;
+        height: 32px;
+        line-height: 1.1;
+}
+@media (max-width: 600px) {
+    .export-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .export-bar label {
+        width: 100%;
+    }
+    .export-bar .btn {
+        width: 100%;
+        min-width: 0;
+        font-size: 1em;
+    }
+}
 .data-card-image,
 .monster-card img,
 .card-image img {

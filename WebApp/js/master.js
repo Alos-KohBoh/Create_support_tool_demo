@@ -1,6 +1,31 @@
 // マスタ情報管理モジュール
 
 class MasterDataManager {
+        // スキル系統管理
+        addSkillSystem(value) {
+            if (!this.masterConfig.skillSystems) this.masterConfig.skillSystems = [];
+            if (!this.masterConfig.skillSystems.includes(value)) {
+                this.masterConfig.skillSystems.push(value);
+                this.saveMasterConfig();
+                return true;
+            }
+            return false;
+        }
+
+        removeSkillSystem(value) {
+            if (!this.masterConfig.skillSystems) return;
+            this.masterConfig.skillSystems = this.masterConfig.skillSystems.filter(s => s !== value);
+            this.saveMasterConfig();
+        }
+
+        moveSkillSystem(index, direction) {
+            const systems = this.masterConfig.skillSystems;
+            if (!systems) return;
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= systems.length) return;
+            [systems[index], systems[newIndex]] = [systems[newIndex], systems[index]];
+            this.saveMasterConfig();
+        }
     constructor() {
         this.masterConfig = this.loadMasterConfig();
     }
@@ -60,6 +85,12 @@ class MasterDataManager {
                 { id: 'type', label: '種類', type: 'select', required: true, system: true },
                 { id: 'rarity', label: 'レアリティ', type: 'select', required: true, system: true }
             ],
+            itemEffectTypes: [
+                '回復', '強化', '弱化', '攻撃', '防御', 'その他'
+            ],
+            itemEffectTargets: [
+                'HP', 'MP', '攻撃力', '防御力', '素早さ', '運', '使用対象', '使用箇所'
+            ],
             characterJobs: ['戦士', '魔法使い', '僧侶', '盗賊', '騎士', '弓使い', '召喚士'],
             characterRaces: ['人間', 'エルフ', 'ドワーフ', '獣人', 'ドラゴニュート', '天使', '悪魔'],
             characterElements: ['無', '火', '水', '風', '土', '光', '闇', '雷', '氷'],
@@ -70,6 +101,10 @@ class MasterDataManager {
                 { id: 'defense', label: '防御力', defaultValue: 10, system: true },
                 { id: 'speed', label: '素早さ', defaultValue: 10, system: true },
                 { id: 'luck', label: '運', defaultValue: 10, system: true }
+            ],
+            skillSystems: [
+                '物理魔法', '精神魔法', '系統外魔法', '補助魔法',
+                '斬撃系', '打撃系', '刺突系', '気力系', '強化系'
             ],
             workGenres: ['ファンタジー', 'SF', 'ミステリー', 'ホラー', '恋愛', '冒険', '歴史', '現代', 'その他'],
             timeOfDay: ['早朝', '朝', '午前', '昼', '午後', '夕方', '夜', '深夜', '不明'],
@@ -307,6 +342,14 @@ class MasterDataManager {
 
     // すべてのセレクトボックスを更新
     updateAllSelects() {
+                // スキル系統セレクト更新
+                const skillSystemSelects = document.querySelectorAll('select#skillSystem, select[data-field="skillSystem"]');
+                skillSystemSelects.forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">-- 系統を選択 --</option>' +
+                        (this.masterConfig.skillSystems || []).map(s => `<option value="${s}">${s}</option>`).join('');
+                    if (currentValue) select.value = currentValue;
+                });
         // 危険度セレクト更新
         const dangerSelects = document.querySelectorAll('select[data-field="danger"]');
         dangerSelects.forEach(select => {
@@ -351,6 +394,23 @@ class MasterDataManager {
 
 // マスタ管理UI
 class MasterUI {
+            renderSkillSystems() {
+                const container = document.getElementById('skillSystemList');
+                if (!container) return;
+                const systems = this.masterManager.masterConfig.skillSystems || [];
+                container.innerHTML = systems.map((system, index) => `
+                    <div class="skill-system-item">
+                        <div class="field-info">
+                            <span class="field-value">${system}</span>
+                        </div>
+                        <div class="field-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="masterUI.moveSkillSystem(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                            <button class="btn btn-secondary btn-sm" onclick="masterUI.moveSkillSystem(${index}, 1)" ${index === systems.length - 1 ? 'disabled' : ''}>↓</button>
+                            <button class="btn btn-danger btn-sm" onclick="masterUI.removeSkillSystem('${system}')">削除</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
         // 成長値編集UIを描画
         renderLevelUpConfig() {
             const levelUpConfig = this.masterManager.masterConfig.levelUpConfig || {};
@@ -377,6 +437,10 @@ class MasterUI {
     }
 
     initializeEventListeners() {
+                // スキル系統追加
+                document.getElementById('addSkillSystemBtn')?.addEventListener('click', () => {
+                    this.showAddValueModal('skillSystem', 'スキル系統');
+                });
         // モンスター項目追加
         document.getElementById('addMonsterFieldBtn')?.addEventListener('click', () => {
             this.showAddFieldModal('monster');
@@ -428,12 +492,15 @@ class MasterUI {
     }
 
     render() {
+        this.renderSkillSystems();
         this.renderMonsterFields();
         this.renderItemFields();
         this.renderMonsterRarities();
         this.renderItemRarities();
         this.renderDangerLevels();
         this.renderItemTypes();
+        this.renderItemEffectTypes();
+        this.renderItemEffectTargets();
         this.renderCharacterJobs();
         this.renderCharacterRaces();
         this.renderCharacterElements();
@@ -443,6 +510,80 @@ class MasterUI {
         this.renderLevelUpConfig();
         // ドラッグ&ドロップイベントを設定
         this.setupDragAndDrop();
+    }
+
+    renderItemEffectTypes() {
+        const container = document.getElementById('itemEffectTypeList');
+        if (!container) return;
+        const types = this.masterManager.masterConfig.itemEffectTypes || [];
+        container.innerHTML = types.map((type, index) => `
+            <div class="item-effect-type-item">
+                <span class="field-value">${type}</span>
+                <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveItemEffectType(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveItemEffectType(${index}, 1)" ${index === types.length - 1 ? 'disabled' : ''}>↓</button>
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeItemEffectType('${type}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderItemEffectTargets() {
+        const container = document.getElementById('itemEffectTargetList');
+        if (!container) return;
+        const targets = this.masterManager.masterConfig.itemEffectTargets || [];
+        container.innerHTML = targets.map((target, index) => `
+            <div class="item-effect-target-item">
+                <span class="field-value">${target}</span>
+                <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveItemEffectTarget(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveItemEffectTarget(${index}, 1)" ${index === targets.length - 1 ? 'disabled' : ''}>↓</button>
+                    <button class="btn btn-danger btn-sm" onclick="masterUI.removeItemEffectTarget('${target}')">削除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    moveItemEffectType(index, direction) {
+        const types = this.masterManager.masterConfig.itemEffectTypes;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= types.length) return;
+        [types[index], types[newIndex]] = [types[newIndex], types[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+    moveItemEffectTarget(index, direction) {
+        const targets = this.masterManager.masterConfig.itemEffectTargets;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= targets.length) return;
+        [targets[index], targets[newIndex]] = [targets[newIndex], targets[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+    removeItemEffectType(type) {
+        this.masterManager.masterConfig.itemEffectTypes = this.masterManager.masterConfig.itemEffectTypes.filter(t => t !== type);
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+    removeItemEffectTarget(target) {
+        this.masterManager.masterConfig.itemEffectTargets = this.masterManager.masterConfig.itemEffectTargets.filter(t => t !== target);
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+
+    initializeEventListeners() {
+        // ...既存...
+        // 効果種類追加
+        document.getElementById('addItemEffectTypeBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('itemEffectType', '効果の種類');
+        });
+        // 効果箇所追加
+        document.getElementById('addItemEffectTargetBtn')?.addEventListener('click', () => {
+            this.showAddValueModal('itemEffectTarget', '効果の箇所');
+        });
+        // ...既存...
+        // 既存イベントはそのまま...
+        // ...
     }
 
 
@@ -540,14 +681,12 @@ class MasterUI {
     renderMonsterFields() {
         const container = document.getElementById('monsterFieldsList');
         if (!container) return;
-
         const fields = this.masterManager.masterConfig.monsterFields;
         if (fields.length === 0) {
             container.innerHTML = '<p class="master-empty">項目がありません</p>';
             return;
         }
-
-        container.innerHTML = fields.map(field => `
+        container.innerHTML = fields.map((field, idx) => `
             <div class="master-field-item" data-field-id="${field.id}">
                 <div class="field-info">
                     <span class="field-label">${field.label}</span>
@@ -556,6 +695,8 @@ class MasterUI {
                     ${field.system ? '<span class="field-type" style="background: var(--secondary-color);">システム</span>' : ''}
                 </div>
                 <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveMonsterField(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveMonsterField(${idx}, 1)" ${idx === fields.length - 1 ? 'disabled' : ''}>↓</button>
                     ${!field.system ? `<button class="btn btn-danger btn-sm" onclick="masterUI.removeMonsterField('${field.id}')">削除</button>` : ''}
                 </div>
             </div>
@@ -565,14 +706,12 @@ class MasterUI {
     renderItemFields() {
         const container = document.getElementById('itemFieldsList');
         if (!container) return;
-
         const fields = this.masterManager.masterConfig.itemFields;
         if (fields.length === 0) {
             container.innerHTML = '<p class="master-empty">項目がありません</p>';
             return;
         }
-
-        container.innerHTML = fields.map(field => `
+        container.innerHTML = fields.map((field, idx) => `
             <div class="master-field-item" data-field-id="${field.id}">
                 <div class="field-info">
                     <span class="field-label">${field.label}</span>
@@ -581,6 +720,8 @@ class MasterUI {
                     ${field.system ? '<span class="field-type" style="background: var(--secondary-color);">システム</span>' : ''}
                 </div>
                 <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveItemField(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveItemField(${idx}, 1)" ${idx === fields.length - 1 ? 'disabled' : ''}>↓</button>
                     ${!field.system ? `<button class="btn btn-danger btn-sm" onclick="masterUI.removeItemField('${field.id}')">削除</button>` : ''}
                 </div>
             </div>
@@ -590,14 +731,15 @@ class MasterUI {
     renderMonsterRarities() {
         const container = document.getElementById('monsterRarityList');
         if (!container) return;
-
         const rarities = this.masterManager.masterConfig.monsterRarities;
-        container.innerHTML = rarities.map(rarity => `
+        container.innerHTML = rarities.map((rarity, idx) => `
             <div class="rarity-item">
                 <div class="field-info">
                     <span class="field-value">${rarity}</span>
                 </div>
                 <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveMonsterRarity(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveMonsterRarity(${idx}, 1)" ${idx === rarities.length - 1 ? 'disabled' : ''}>↓</button>
                     <button class="btn btn-danger btn-sm" onclick="masterUI.removeMonsterRarity('${rarity}')">削除</button>
                 </div>
             </div>
@@ -607,18 +749,51 @@ class MasterUI {
     renderItemRarities() {
         const container = document.getElementById('itemRarityList');
         if (!container) return;
-
         const rarities = this.masterManager.masterConfig.itemRarities;
-        container.innerHTML = rarities.map(rarity => `
+        container.innerHTML = rarities.map((rarity, idx) => `
             <div class="rarity-item">
                 <div class="field-info">
                     <span class="field-value">${rarity}</span>
                 </div>
                 <div class="field-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveItemRarity(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="btn btn-secondary btn-sm" onclick="masterUI.moveItemRarity(${idx}, 1)" ${idx === rarities.length - 1 ? 'disabled' : ''}>↓</button>
                     <button class="btn btn-danger btn-sm" onclick="masterUI.removeItemRarity('${rarity}')">削除</button>
                 </div>
             </div>
         `).join('');
+    }
+    moveMonsterField(index, direction) {
+        const fields = this.masterManager.masterConfig.monsterFields;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= fields.length) return;
+        [fields[index], fields[newIndex]] = [fields[newIndex], fields[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+    moveItemField(index, direction) {
+        const fields = this.masterManager.masterConfig.itemFields;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= fields.length) return;
+        [fields[index], fields[newIndex]] = [fields[newIndex], fields[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+    moveMonsterRarity(index, direction) {
+        const arr = this.masterManager.masterConfig.monsterRarities;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= arr.length) return;
+        [arr[index], arr[newIndex]] = [arr[newIndex], arr[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
+    }
+    moveItemRarity(index, direction) {
+        const arr = this.masterManager.masterConfig.itemRarities;
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= arr.length) return;
+        [arr[index], arr[newIndex]] = [arr[newIndex], arr[index]];
+        this.masterManager.saveMasterConfig();
+        this.render();
     }
 
     renderDangerLevels() {
@@ -709,6 +884,9 @@ class MasterUI {
             case 'characterElement':
                 success = this.masterManager.addCharacterElement(value);
                 break;
+            case 'skillSystem':
+                success = this.masterManager.addSkillSystem(value);
+                break;
         }
 
         if (!success) {
@@ -716,6 +894,13 @@ class MasterUI {
         }
 
         this.render();
+    }
+
+    removeSkillSystem(value) {
+        if (confirm(`「${value}」を削除しますか？`)) {
+            this.masterManager.removeSkillSystem(value);
+            this.render();
+        }
     }
 
     showAddStatModal() {
@@ -895,6 +1080,10 @@ class MasterUI {
     }
 
     // 順番入れ替え関数
+    moveSkillSystem(index, direction) {
+        this.masterManager.moveSkillSystem(index, direction);
+        this.render();
+    }
     moveCharacterJob(index, direction) {
         const jobs = this.masterManager.masterConfig.characterJobs;
         if (!jobs) return;

@@ -1,4 +1,3 @@
-    <!-- スキル追加・編集モーダル -->
     <div id="skillModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -35,6 +34,11 @@
                     <div class="form-group">
                         <label for="skillDescription">説明</label>
                         <textarea id="skillDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="skillSystem">系統</label>
+                        <select id="skillSystem" class="form-control"></select>
+                        <small class="form-help">スキルの系統を選択してください</small>
                     </div>
                 </form>
             </div>
@@ -269,27 +273,7 @@
 
         <!-- データ作成・管理セクション -->
         <div id="data-section" class="section-screen" style="display: none;">
-                        <!-- データエクスポートUI -->
-                        <div class="export-bar" style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
-                            <label>エクスポート対象:
-                                <select id="exportDataTarget" class="form-control" style="width:auto; display:inline-block;">
-                                    <option value="characters">キャラクター</option>
-                                    <option value="monsters">モンスター</option>
-                                    <option value="items">アイテム</option>
-                                    <option value="all">全て</option>
-                                </select>
-                            </label>
-                            <label>形式:
-                                <select id="exportDataFormat" class="form-control" style="width:auto; display:inline-block;">
-                                    <option value="text">テキスト</option>
-                                    <option value="csv">CSV</option>
-                                    <option value="md">Markdown</option>
-                                </select>
-                            </label>
-                            <button id="exportDataBtn" class="btn btn-primary">出力</button>
-                            <button id="copyExportDataBtn" class="btn btn-secondary">コピー</button>
-                            <button id="saveExportDataBtn" class="btn btn-info">ファイル保存</button>
-                        </div>
+                        <!-- データエクスポートUIは各タブ下部に移動 -->
                         <div id="exportDataPreview" style="white-space:pre; background:#f8f8f8; border:1px solid #ccc; padding:10px; margin-bottom:20px; max-height:300px; overflow:auto; display:none;"></div>
             <div class="section-header">
                 <button class="btn-back" data-back="home">← ホームに戻る</button>
@@ -304,21 +288,46 @@
                 <button class="main-tab-btn" data-tab="items">アイテム</button>
                 <button class="main-tab-btn" data-tab="master">マスタ設定</button>
                 <button class="main-tab-btn" data-tab="system">システム</button>
-                        <!-- スキルタブ -->
-                        <div id="skills" class="main-tab-content" style="display: none;">
-                            <div class="card">
-                                <div class="list-header">
-                                    <h2>スキル一覧</h2>
-                                    <button id="addSkillBtn" class="btn btn-success">スキル追加</button>
-                                </div>
-                                <div id="skillListView" class="data-list-view">
-                                    <!-- スキル一覧を動的に生成 -->
-                                </div>
-                            </div>
-                        </div>
             </div>
 
-            <!-- キャラクタータブ（新規） -->
+            <div id="skills" class="main-tab-content" style="display: none;">
+                <div class="card">
+                    <div class="list-header">
+                        <h2>スキル一覧</h2>
+                        <button id="addSkillBtn" class="btn btn-success">スキル追加</button>
+                        <!-- スキル一覧 検索フォーム（タブ内に移動） -->
+                        <div id="skillSearchBar" class="filter-bar" style="margin: 16px 0; display: flex; gap: 8px; align-items: flex-end;">
+                            <input type="text" id="skillNameFilter" class="filter-input" placeholder="スキル名で検索..." style="width: 160px;">
+                            <select id="skillSystemFilter" class="filter-select" style="width: 120px;"><option value="">系統: すべて</option></select>
+                            <select id="skillCostTypeFilter" class="filter-select" style="width: 120px;"><option value="">消費項目: すべて</option></select>
+                            <button id="clearSkillFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
+                        </div>
+                    </div>
+                    <div id="skillListView" class="data-list-view">
+                        <!-- スキル一覧を動的に生成 -->
+                    </div>
+                </div>
+                <!-- 共通エクスポートバー（カード外・フッター風） -->
+                <div class="export-bar" id="exportBar" style="margin:24px 0 0 0; display:flex; gap:12px; align-items:center; border-top:1px solid #eee; padding-top:16px;">
+                    <label>エクスポート対象:
+                        <select id="exportDataTarget" class="form-control" style="width:auto; display:inline-block;">
+                            <option value="skills">スキル</option>
+                        </select>
+                    </label>
+                    <label>形式:
+                        <select id="exportDataFormat" class="form-control" style="width:auto; display:inline-block;">
+                            <option value="text">テキスト</option>
+                            <option value="csv">CSV</option>
+                            <option value="md">Markdown</option>
+                        </select>
+                    </label>
+                    <button id="exportDataBtn" class="btn btn-primary">出力</button>
+                    <button id="copyExportDataBtn" class="btn btn-secondary">コピー</button>
+                    <button id="saveExportDataBtn" class="btn btn-info">ファイル保存</button>
+                </div>
+            </div>
+
+            <!-- タブコンテンツを main-tabs の直後に全て並列配置 -->
             <div id="characters" class="main-tab-content active">
                 <div class="card">
                     <div class="list-header">
@@ -327,7 +336,6 @@
                             キャラクター追加
                         </button>
                     </div>
-                    
                     <!-- フィルター -->
                     <div class="filter-bar">
                         <input type="text" id="characterNameFilter" class="filter-input" placeholder="名前で検索...">
@@ -342,11 +350,9 @@
                         </select>
                         <button id="clearCharacterFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
                     </div>
-
                     <div id="characterListView" class="data-list-view">
                         <div class="empty-message">キャラクターが登録されていません</div>
                     </div>
-
                     <!-- 関係性マップセクション -->
                     <div class="relationship-section" style="margin-top: 30px;">
                         <div class="list-header">
@@ -360,9 +366,25 @@
                         </div>
                     </div>
                 </div>
+                <!-- 共通エクスポートバー（カード外・フッター風） -->
+                <div class="export-bar" id="exportBar" style="margin:24px 0 0 0; display:flex; gap:12px; align-items:center; border-top:1px solid #eee; padding-top:16px;">
+                    <label>エクスポート対象:
+                        <select id="exportDataTarget" class="form-control" style="width:auto; display:inline-block;">
+                            <option value="characters">キャラクター</option>
+                        </select>
+                    </label>
+                    <label>形式:
+                        <select id="exportDataFormat" class="form-control" style="width:auto; display:inline-block;">
+                            <option value="text">テキスト</option>
+                            <option value="csv">CSV</option>
+                            <option value="md">Markdown</option>
+                        </select>
+                    </label>
+                    <button id="exportDataBtn" class="btn btn-primary">出力</button>
+                    <button id="copyExportDataBtn" class="btn btn-secondary">コピー</button>
+                    <button id="saveExportDataBtn" class="btn btn-info">ファイル保存</button>
+                </div>
             </div>
-
-            <!-- モンスタータブ -->
             <div id="monsters" class="main-tab-content" style="display: none;">
                 <div class="card">
                     <div class="list-header">
@@ -371,7 +393,6 @@
                             モンスター追加
                         </button>
                     </div>
-                    
                     <!-- フィルター -->
                     <div class="filter-bar">
                         <input type="text" id="monsterNameFilter" class="filter-input" placeholder="名前で検索...">
@@ -383,10 +404,27 @@
                         </select>
                         <button id="clearMonsterFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
                     </div>
-
                     <div id="monsterListView" class="data-list-view">
                         <!-- モンスター一覧を動的に生成 -->
                     </div>
+                </div>
+                <!-- 共通エクスポートバー（カード外・フッター風） -->
+                <div class="export-bar" id="exportBar" style="margin:24px 0 0 0; display:flex; gap:12px; align-items:center; border-top:1px solid #eee; padding-top:16px;">
+                    <label>エクスポート対象:
+                        <select id="exportDataTarget" class="form-control" style="width:auto; display:inline-block;">
+                            <option value="monsters">モンスター</option>
+                        </select>
+                    </label>
+                    <label>形式:
+                        <select id="exportDataFormat" class="form-control" style="width:auto; display:inline-block;">
+                            <option value="text">テキスト</option>
+                            <option value="csv">CSV</option>
+                            <option value="md">Markdown</option>
+                        </select>
+                    </label>
+                    <button id="exportDataBtn" class="btn btn-primary">出力</button>
+                    <button id="copyExportDataBtn" class="btn btn-secondary">コピー</button>
+                    <button id="saveExportDataBtn" class="btn btn-info">ファイル保存</button>
                 </div>
             </div>
 
@@ -399,7 +437,6 @@
                             アイテム追加
                         </button>
                     </div>
-
                     <!-- フィルター -->
                     <div class="filter-bar">
                         <input type="text" id="itemNameFilter" class="filter-input" placeholder="名前で検索...">
@@ -411,10 +448,27 @@
                         </select>
                         <button id="clearItemFilter" class="btn btn-secondary btn-sm">フィルタクリア</button>
                     </div>
-
                     <div id="itemListView" class="data-list-view">
                         <!-- アイテム一覧を動的に生成 -->
                     </div>
+                </div>
+                <!-- 共通エクスポートバー（カード外・フッター風） -->
+                <div class="export-bar" id="exportBar" style="margin:24px 0 0 0; display:flex; gap:12px; align-items:center; border-top:1px solid #eee; padding-top:16px;">
+                    <label>エクスポート対象:
+                        <select id="exportDataTarget" class="form-control" style="width:auto; display:inline-block;">
+                            <option value="items">アイテム</option>
+                        </select>
+                    </label>
+                    <label>形式:
+                        <select id="exportDataFormat" class="form-control" style="width:auto; display:inline-block;">
+                            <option value="text">テキスト</option>
+                            <option value="csv">CSV</option>
+                            <option value="md">Markdown</option>
+                        </select>
+                    </label>
+                    <button id="exportDataBtn" class="btn btn-primary">出力</button>
+                    <button id="copyExportDataBtn" class="btn btn-secondary">コピー</button>
+                    <button id="saveExportDataBtn" class="btn btn-info">ファイル保存</button>
                 </div>
             </div>
 
@@ -422,6 +476,8 @@
             <div id="master" class="main-tab-content" style="display: none;">
                 <div class="card">
                     <h2>マスタ情報管理</h2>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
                     
                     <!-- モンスター設定可能項目 -->
                     <div class="master-section">
@@ -471,7 +527,29 @@
                             アイテムレアリティを追加
                         </button>
                     </div>
+                    <!-- 効果の種類マスタ管理 -->
+                    <div class="master-section">
+                        <h3>効果の種類設定</h3>
+                        <div class="item-effect-type-list" id="itemEffectTypeList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addItemEffectTypeBtn" class="btn btn-info">
+                            効果の種類を追加
+                        </button>
+                    </div>
 
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- 効果の箇所マスタ管理 -->
+                    <div class="master-section">
+                        <h3>効果の箇所設定</h3>
+                        <div class="item-effect-target-list" id="itemEffectTargetList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addItemEffectTargetBtn" class="btn btn-info">
+                            効果の箇所を追加
+                        </button>
+                    </div>
                     <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
 
                     <!-- 危険度管理 -->
@@ -547,6 +625,19 @@
                         </div>
                         <button id="addCharacterStatBtn" class="btn btn-info">
                             ステータス項目を追加
+                        </button>
+                    </div>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                    <!-- スキル系統マスタ管理 -->
+                    <div class="master-section">
+                        <h3>スキル系統設定</h3>
+                        <div class="skill-system-list" id="skillSystemList">
+                            <!-- 動的に生成 -->
+                        </div>
+                        <button id="addSkillSystemBtn" class="btn btn-info">
+                            系統を追加
                         </button>
                     </div>
 
@@ -1142,7 +1233,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     <!-- キャラクター追加モーダル（新規） -->
     <div id="characterModal" class="modal">
@@ -1498,7 +1588,7 @@
                         <option value="恋人">恋人</option>
                         <option value="家族">家族</option>
                         <option value="師弟">師弟</option>
-                        <option value="ライバル">ライバル</option>
+                                               <option value="ライバル">ライバル</option>
                         <option value="敵対">敵対</option>
                         <option value="仲間">仲間</option>
                         <option value="知人">知人</option>
@@ -1653,8 +1743,31 @@
                     <textarea id="itemDescription" class="form-control" rows="2" placeholder="アイテムの説明を入力"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="itemEffect">効果 (任意)</label>
-                    <textarea id="itemEffect" class="form-control" rows="2" placeholder="アイテムの効果を入力"></textarea>
+                    <label>効果 (任意)</label>
+                    <div id="itemEffectsContainer">
+                        <!-- 効果リスト -->
+                    </div>
+                    <div class="item-effect-inputs" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: flex-end; max-width: 100%;">
+                        <div style="min-width: 120px; flex: 1 1 120px;">
+                            <label style="font-size: 0.9em;">種類</label>
+                            <select id="itemEffectTypeInput" class="form-control"></select>
+                        </div>
+                        <div style="min-width: 120px; flex: 1 1 120px;">
+                            <label style="font-size: 0.9em;">箇所</label>
+                            <select id="itemEffectTargetInput" class="form-control"></select>
+                        </div>
+                        <div style="flex-basis: 100%; height: 0;"></div>
+                        <div style="min-width: 100px; flex: 1 1 100px;">
+                            <label style="font-size: 0.9em;">量</label>
+                            <input type="number" id="itemEffectValueInput" class="form-control" placeholder="例: 10">
+                        </div>
+                        <div style="min-width: 100px; flex: 1 1 100px;">
+                            <label style="font-size: 0.9em;">～</label>
+                            <input type="number" id="itemEffectValueMaxInput" class="form-control" placeholder="最大値" title="最大値（任意）">
+                        </div>
+                        <button type="button" id="addItemEffectBtn" class="btn btn-success" style="height: 38px; min-width: 60px;">追加</button>
+                    </div>
+                    <small class="form-help">効果は複数追加できます。種類・箇所・量を選択/入力し「追加」してください。</small>
                 </div>
             </div>
             <div class="modal-footer">

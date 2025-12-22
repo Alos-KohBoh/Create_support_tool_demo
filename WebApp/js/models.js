@@ -57,7 +57,7 @@ class DropResult {
 
 // スキルクラス
 class Skill {
-    constructor(id, name, costType = '', costValue = 0, target = '', description = '', parentId = '', childIds = []) {
+    constructor(id, name, costType = '', costValue = 0, target = '', description = '', parentId = '', childIds = [], system = '') {
         this.id = id || this.generateId();
         this.name = name;
         this.costType = costType; // 消費項目（例: MP, アイテム, 回数など）
@@ -66,6 +66,7 @@ class Skill {
         this.description = description;
         this.parentId = parentId || '';
         this.childIds = Array.isArray(childIds) ? childIds : [];
+        this.system = system || '';
     }
     generateId() {
         return 'skill_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -79,6 +80,11 @@ class DataStorage {
         this.monsters = [];
         this.items = [];
         this.skills = [];
+        // 系統マスタ
+        this.skillSystems = [
+            '物理魔法', '精神魔法', '系統外魔法', '補助魔法',
+            '斬撃系', '打撃系', '刺突系', '気力系', '強化系'
+        ];
         // 既存データ読込
         this.loadSkillsFromLocalStorage();
         this.loadFromLocalStorage();
@@ -198,7 +204,7 @@ class DataStorage {
                     if (!s.id) s.id = this.generateId();
                     return new Skill(
                         s.id, s.name, s.costType, s.costValue, s.target, s.description,
-                        s.parentId || '', s.childIds || []
+                        s.parentId || '', s.childIds || [], s.system || ''
                     );
                 });
             }

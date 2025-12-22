@@ -1,4 +1,37 @@
 class App {
+    /**
+     * キャラクターに経験値を加算する（数値入力ダイアログ付き）
+     * @param {string} characterId
+     */
+    addExpToCharacter(characterId) {
+        const character = this.characterManager.getCharacterById(characterId);
+        if (!character) {
+            alert('キャラクターが見つかりません');
+            return;
+        }
+        let input = prompt(`${character.name || 'キャラクター'}に加算する経験値を入力してください`, '0');
+        if (input === null) return; // キャンセル
+        input = input.trim();
+        if (!/^[-+]?\d+$/.test(input)) {
+            alert('数値を入力してください');
+            return;
+        }
+        const addExp = parseInt(input, 10);
+        if (isNaN(addExp)) {
+            alert('数値を入力してください');
+            return;
+        }
+        // 経験値加算＆レベルアップ処理
+        const beforeLevel = character.level;
+        const leveledUp = character.addExp(addExp);
+        this.characterManager.updateCharacter(character.id, character);
+        this.renderCharacterList();
+        let msg = `${character.name || 'キャラクター'}の経験値が${addExp}増加しました。`;
+        if (leveledUp && character.level > beforeLevel) {
+            msg += `\nレベルアップ！ Lv.${beforeLevel} → Lv.${character.level}`;
+        }
+        alert(msg);
+    }
         // データ一覧エクスポート（テキスト/CSV/Markdown）
         exportListData(target, format) {
             const escape = (s) => (s == null ? '' : String(s).replace(/\r?\n/g, ' '));
@@ -145,7 +178,6 @@ class App {
                 }
             };
         }
-    // ...existing code...
     // ==========================
     // モンスター用スキル管理UI
     // ==========================
@@ -218,7 +250,7 @@ class App {
                 saveSkillBtn._monsterSkillHandler = handler;
             }
         };
-        window._editingMonsterSkills = selectedSkills;
+        window._editingMonsterSkills = [...selectedSkills];
     }
                     // ==========================
                     // スキル管理機能
@@ -226,8 +258,31 @@ class App {
                     renderSkillList() {
                         const container = document.getElementById('skillListView');
                         if (!container) return;
-                        const skills = this.dataStorage.getAllSkills();
-                        if (!skills || skills.length === 0) {
+                        let skills = this.dataStorage.getAllSkills();
+                        if (!Array.isArray(skills)) skills = [];
+                        // 検索フォームの値でフィルタ
+                        const nameFilter = document.getElementById('skillNameFilter')?.value.trim().toLowerCase() || '';
+                        const systemFilter = document.getElementById('skillSystemFilter')?.value.trim();
+                        const costTypeFilter = document.getElementById('skillCostTypeFilter')?.value.trim();
+                        if (nameFilter || systemFilter || costTypeFilter) {
+                            skills = skills.filter(s => {
+                                let match = true;
+                                if (nameFilter) {
+                                    match = match && (
+                                        (s.name && s.name.toLowerCase().includes(nameFilter)) ||
+                                        (s.description && s.description.toLowerCase().includes(nameFilter))
+                                    );
+                                }
+                                if (systemFilter) {
+                                    match = match && s.system === systemFilter;
+                                }
+                                if (costTypeFilter) {
+                                    match = match && s.costType === costTypeFilter;
+                                }
+                                return match;
+                            });
+                        }
+                        if (skills.length === 0) {
                             container.innerHTML = '<div class="empty-message">スキルが登録されていません</div>';
                             return;
                         }
@@ -240,6 +295,7 @@ class App {
                                     <div class="data-card-content">
                                         <h3 class="data-card-title">${skill.name}</h3>
                                         <div class="data-card-badges">
+                                            ${skill.system ? `<span class="badge badge-system">${skill.system}</span>` : ''}
                                             ${skill.costType ? `<span class="badge badge-info">${skill.costType}:${skill.costValue}</span>` : ''}
                                             ${skill.target ? `<span class="badge badge-secondary">${skill.target}</span>` : ''}
                                         </div>
@@ -258,9 +314,6 @@ class App {
                                     if (child) renderSkillTree(child, indent + 1);
                                 });
                             }
-
-                    // データエクスポートUI初期化
-                    this.setupExportUI();
                         };
                         // ルート（親なし）スキルのみから開始
                         skills.filter(s => !s.parentId).forEach(rootSkill => {
@@ -284,14 +337,18 @@ class App {
         const skillTargetInput = document.getElementById('skillTarget');
         const skillDescriptionInput = document.getElementById('skillDescription');
         const parentSelect = document.getElementById('skillParentSelect');
-        if (!select || !free || !skillModalTitle || !skillIdInput || !skillNameInput || !skillCostValueInput || !skillTargetInput || !skillDescriptionInput) return;
-
-        // ステータス項目をセレクトに反映
-        select.innerHTML = '<option value="">-- ステータスから選択 --</option>';
-        if (window.masterManager && window.masterManager.masterConfig.characterStats) {
-            window.masterManager.masterConfig.characterStats.forEach(stat => {
-                select.innerHTML += `<option value="${stat.label}">${stat.label}</option>`;
-            });
+        const systemSelect = document.getElementById('skillSystem');
+        if (!select || !free || !skillModalTitle || !skillIdInput || !skillNameInput || !skillCostValueInput || !skillTargetInput || !skillDescriptionInput || !systemSelect) return;
+        // 系統・消費項目セレクトをマスタから反映
+        if (this.uiManager && typeof this.uiManager.updateSkillModalSelects === 'function') {
+            const systemValue = editSkill && editSkill.system ? editSkill.system : '';
+            // 消費項目はセレクト優先、なければ自由記述
+            let costTypeValue = '';
+            if (editSkill && editSkill.costType && window.masterManager && window.masterManager.masterConfig.characterStats) {
+                const found = window.masterManager.masterConfig.characterStats.some(stat => stat.label === editSkill.costType);
+                costTypeValue = found ? editSkill.costType : '';
+            }
+            this.uiManager.updateSkillModalSelects(systemValue, costTypeValue);
         }
         skillModalTitle.textContent = editSkill ? 'スキル編集' : 'スキル追加';
         skillIdInput.value = editSkill ? editSkill.id : '';
@@ -326,6 +383,10 @@ class App {
                 parentSelect.appendChild(opt);
             });
         }
+        // 系統値の復元
+        if (systemSelect) {
+            systemSelect.value = (editSkill && editSkill.system) ? editSkill.system : '';
+        }
                     }
 
                     editSkill(skillId) {
@@ -343,6 +404,25 @@ class App {
                     // スキル管理イベントリスナー
                     // ==========================
                     setupSkillEventListeners() {
+                                                // 検索フォームのイベント
+                                                const skillNameFilter = document.getElementById('skillNameFilter');
+                                                if (skillNameFilter) {
+                                                    skillNameFilter.addEventListener('input', () => {
+                                                        this.renderSkillList();
+                                                    });
+                                                }
+                                                const skillSystemFilter = document.getElementById('skillSystemFilter');
+                                                if (skillSystemFilter) {
+                                                    skillSystemFilter.addEventListener('change', () => {
+                                                        this.renderSkillList();
+                                                    });
+                                                }
+                                                const skillCostTypeFilter = document.getElementById('skillCostTypeFilter');
+                                                if (skillCostTypeFilter) {
+                                                    skillCostTypeFilter.addEventListener('change', () => {
+                                                        this.renderSkillList();
+                                                    });
+                                                }
                         const addSkillBtn = document.getElementById('addSkillBtn');
                         if (addSkillBtn) {
                             addSkillBtn.addEventListener('click', () => {
@@ -379,14 +459,18 @@ class App {
                             alert('スキル名は必須です');
                             return;
                         }
+                        // 系統値取得
+                        const system = document.getElementById('skillSystem').value;
                         if (id) {
                             // 既存スキルの更新
                             const old = this.dataStorage.getAllSkills().find(s => s.id === id);
-                            const updated = new Skill(id, name, costType, costValue, target, description, parentId, old ? old.childIds : []);
+                            // system値が空の場合は既存値を維持
+                            const systemValue = system || (old ? old.system : '');
+                            const updated = new Skill(id, name, costType, costValue, target, description, parentId, old ? old.childIds : [], systemValue);
                             this.dataStorage.updateSkill(updated);
                         } else {
                             // 新規追加
-                            const skill = new Skill(null, name, costType, costValue, target, description, parentId, []);
+                            const skill = new Skill(null, name, costType, costValue, target, description, parentId, [], system);
                             this.dataStorage.addSkill(skill);
                         }
                         this.uiManager.hideModal('skillModal');
@@ -807,12 +891,17 @@ class App {
         });
 
         document.getElementById('addResultsToBag').addEventListener('click', () => {
+            // 多重押下防止: すでにdisabledなら何もしない
+            const btn = document.getElementById('addResultsToBag');
+            if (btn && btn.disabled) return;
             this.addResultsToBag();
         });
 
         const addExpBtn = document.getElementById('addExpToCharacter');
         if (addExpBtn) {
             addExpBtn.addEventListener('click', () => {
+                // 多重押下防止: すでにdisabledなら何もしない
+                if (addExpBtn.disabled) return;
                 this.addGachaExpToCharacter();
             });
         }
@@ -1440,6 +1529,22 @@ class App {
             itemRarityFilter.innerHTML = '<option value="">レア度: すべて</option>' +
                 rarities.map(r => `<option value="${r}">${r}</option>`).join('');
         }
+
+        // スキル系統フィルター
+        const skillSystemFilter = document.getElementById('skillSystemFilter');
+        if (skillSystemFilter && masterManager && Array.isArray(masterManager.masterConfig.skillSystems)) {
+            const systems = masterManager.masterConfig.skillSystems;
+            skillSystemFilter.innerHTML = '<option value="">系統: すべて</option>' +
+                systems.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        // スキル消費項目フィルター
+        const skillCostTypeFilter = document.getElementById('skillCostTypeFilter');
+        if (skillCostTypeFilter && masterManager && Array.isArray(masterManager.masterConfig.characterStats)) {
+            const stats = masterManager.masterConfig.characterStats;
+            skillCostTypeFilter.innerHTML = '<option value="">消費項目: すべて</option>' +
+                stats.map(stat => `<option value="${stat.label}">${stat.label}</option>`).join('');
+        }
     }
 
     // モンスター選択を読み込み
@@ -1630,12 +1735,22 @@ class App {
 
     // アイテム保存
     saveItem() {
+        // 効果編集UIの内容をitemEffect欄に必ず反映し、保存時は常にJSON配列形式で保存
+        let effect = '';
+        if (window._editingItemEffects && Array.isArray(window._editingItemEffects)) {
+            effect = JSON.stringify(window._editingItemEffects);
+            const effectInput = document.getElementById('itemEffect');
+            if (effectInput) effectInput.value = effect;
+        } else {
+            // 念のためテキスト欄からも取得
+            const effectElem = document.getElementById('itemEffect');
+            effect = effectElem ? effectElem.value.trim() : '';
+        }
         const name = document.getElementById('itemName').value.trim();
         const type = document.getElementById('itemType').value;
         const rarity = document.getElementById('itemRarity').value;
         const imageUrl = document.getElementById('itemImageUrl').value.trim();
         const description = document.getElementById('itemDescription').value.trim();
-        const effect = document.getElementById('itemEffect').value.trim();
         const editId = document.getElementById('saveItem').dataset.editId;
 
         if (!name) {
@@ -1654,6 +1769,7 @@ class App {
                 item.description = description;
                 item.effect = effect;
                 this.dataStorage.updateItem(item);
+                this.dataStorage.saveToLocalStorage();
                 alert('アイテム情報を更新しました');
             }
             delete document.getElementById('saveItem').dataset.editId;
@@ -1661,6 +1777,7 @@ class App {
             // 新規追加モード
             const item = new Item(null, name, type, rarity, imageUrl, description, effect);
             this.dataStorage.addItem(item);
+            this.dataStorage.saveToLocalStorage();
             // ドロップ追加モードならドロップリストにも追加
             if (window._dropItemAddMode) {
                 const monsterId = document.getElementById('dropMonsterSelect').value;
@@ -1683,7 +1800,8 @@ class App {
         document.getElementById('itemName').value = '';
         document.getElementById('itemImageUrl').value = '';
         document.getElementById('itemDescription').value = '';
-        document.getElementById('itemEffect').value = '';
+        const effectInput = document.getElementById('itemEffect');
+        if (effectInput) effectInput.value = '';
     }
 
     // ドロップ管理を開く
@@ -2149,8 +2267,22 @@ class App {
         document.getElementById('itemRarity').value = item.rarity;
         document.getElementById('itemImageUrl').value = item.imageUrl || '';
         document.getElementById('itemDescription').value = item.description || '';
-        document.getElementById('itemEffect').value = item.effect || '';
-        
+        // 効果欄の復元
+        let effects = [];
+        if (item.effect && item.effect.trim().startsWith('[')) {
+            try {
+                effects = JSON.parse(item.effect);
+            } catch(e) { effects = []; }
+        } else if (item.effect) {
+            // 旧テキスト形式
+            effects = [{ type: '', target: '', value: item.effect, valueMax: '' }];
+        }
+        window._editingItemEffects = effects;
+        // itemEffect欄にも必ず反映
+        const effectInput = document.getElementById('itemEffect');
+        if (effectInput) effectInput.value = item.effect || '';
+        this.setupItemEffectUI();
+
         // 既存アイテムの編集モード
         document.getElementById('saveItem').dataset.editId = itemId;
         this.uiManager.showModal('itemModal');
@@ -2389,7 +2521,7 @@ class App {
                 bagTitle.textContent = '鞄';
             }
         } else {
-            // 共通倉庫
+            // 倉庫
             items = Object.entries(this.bagManager.items);
             count = this.bagManager.getCurrentCount();
             bagTitle.textContent = '倉庫';
@@ -2409,14 +2541,17 @@ class App {
         const rarityFilter = rarityFilterSelect ? rarityFilterSelect.value : '';
 
         // フィルター適用
-        const filteredItems = items.filter(([name, qty]) => {
-            const item = itemMap[name] || {};
-            if (nameFilter && !name.toLowerCase().includes(nameFilter)) return false;
-            if (typeFilter && item.type !== typeFilter) return false;
-            if (rarityFilter && item.rarity !== rarityFilter) return false;
-            return true;
-        });
-
+        // items: [ [name, qty], ... ]
+        let filteredItems = items;
+        if (Array.isArray(items)) {
+            filteredItems = items.filter(([name, qty]) => {
+                const item = itemMap[name] || {};
+                if (nameFilter && !name.toLowerCase().includes(nameFilter)) return false;
+                if (typeFilter && item.type !== typeFilter) return false;
+                if (rarityFilter && item.rarity !== rarityFilter) return false;
+                return true;
+            });
+        }
         // アイテムリスト描画
         if (filteredItems.length === 0) {
             bagItemsList.innerHTML = '<div class="empty-message">鞄は空です</div>';
@@ -2425,7 +2560,17 @@ class App {
                 const item = itemMap[name] || {};
                 const type = item.type ? `<span class=\"bag-item-type\">[${item.type}]</span> ` : '';
                 const rarity = item.rarity ? `<span class=\"bag-item-rarity\">(${item.rarity})</span> ` : '';
-                return `<div class=\"bag-item-row\">${type}${rarity}<span class=\"bag-item-name\">${name}</span> × <span class=\"bag-item-qty\">${qty}</span></div>`;
+                // 追加ボタンの状態をaddedItemsToBAGで判定
+                let addBtnHtml = '';
+                if (window.app && window.app.addedItemsToBAG && window.app.lastGachaResults) {
+                    // ガチャ結果に含まれるアイテムのみボタンを表示
+                    const isGachaItem = window.app.lastGachaResults.some(r => r.itemName === name);
+                    if (isGachaItem) {
+                        const isAdded = window.app.addedItemsToBAG.has(name);
+                        addBtnHtml = `<button id="addToBagBtn_${name}" class="btn btn-xs ${isAdded ? 'btn-secondary' : 'btn-success'}" ${isAdded ? 'disabled' : ''} onclick=\"app.addSpecificItemToBag('${name}',1,'addToBagBtn_${name}')\">${isAdded ? '追加済み' : '鞄に追加'}</button>`;
+                    }
+                }
+                return `<div class=\"bag-item-row\">${type}${rarity}<span class=\"bag-item-name\">${name}</span> × <span class=\"bag-item-qty\">${qty}</span> ${addBtnHtml}</div>`;
             }).join('');
         }
 
@@ -2484,8 +2629,13 @@ class App {
 
     // ガチャ結果を鞄に追加
     addResultsToBag() {
+        const addResultsToBagBtn = document.getElementById('addResultsToBag');
         if (!this.lastGachaResults || this.lastGachaResults.length === 0) {
             alert('追加するガチャ結果がありません');
+            if (addResultsToBagBtn) {
+                addResultsToBagBtn.disabled = true;
+                addResultsToBagBtn.textContent = '追加不可';
+            }
             return;
         }
 
@@ -2496,6 +2646,10 @@ class App {
 
         if (remainingResults.length === 0) {
             alert('すべてのアイテムは既に追加済みです');
+            if (addResultsToBagBtn) {
+                addResultsToBagBtn.disabled = true;
+                addResultsToBagBtn.textContent = '追加済み';
+            }
             return;
         }
 
@@ -2513,6 +2667,10 @@ class App {
             const character = this.characterManager.getCharacterById(selectedCharId);
             if (!character) {
                 alert('キャラクターが見つかりません');
+                if (addResultsToBagBtn) {
+                    addResultsToBagBtn.disabled = true;
+                    addResultsToBagBtn.textContent = '追加不可';
+                }
                 return;
             }
             for (const [itemName, quantity] of Object.entries(itemCounts)) {
@@ -2532,6 +2690,27 @@ class App {
             this.updateBagDisplay();
         }
         alert('すべてのアイテムを鞄に追加しました');
+        // ボタンを無効化し、テキスト変更
+        if (addResultsToBagBtn) {
+            addResultsToBagBtn.disabled = true;
+            addResultsToBagBtn.textContent = '追加済み';
+        }
+        // 各アイテムの個別追加ボタンも全て無効化・追加済みに
+        if (this.lastGachaResults) {
+            const uniqueNames = [...new Set(this.lastGachaResults.map(r => r.itemName))];
+            uniqueNames.forEach(name => {
+                this.addedItemsToBAG.add(name);
+                const btn = document.getElementById(`addToBagBtn_${name}`);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = '追加済み';
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-secondary');
+                }
+            });
+        }
+        // 鞄リスト再描画で状態反映
+        this.updateBagDisplay();
     }
 
     // 特定のアイテムを鞄に追加
@@ -2571,6 +2750,40 @@ class App {
     // キャラクター機能
     // ==========================
 
+    // ガチャ経験値をキャラクターに加算（多重押下防止）
+    addGachaExpToCharacter() {
+        if (this.expAdded) return;
+        const addExpBtn = document.getElementById('addExpToCharacter');
+        // キャラクター選択取得
+        const selectedCharId = document.getElementById('simulationCharacterSelect').value;
+        if (!selectedCharId) {
+            alert('キャラクターを選択してください');
+            return;
+        }
+        const character = this.characterManager.getCharacterById(selectedCharId);
+        if (!character) {
+            alert('キャラクターが見つかりません');
+            return;
+        }
+        if (!this.lastGachaExp || this.lastGachaExp <= 0) {
+            alert('加算する経験値がありません');
+            return;
+        }
+        // addExpで自動レベルアップも反映
+        const leveledUp = character.addExp(this.lastGachaExp);
+        this.characterManager.updateCharacter(character.id, character);
+        this.expAdded = true;
+        if (addExpBtn) {
+            addExpBtn.disabled = true;
+            addExpBtn.textContent = '獲得済み';
+        }
+        let msg = `経験値${this.lastGachaExp}を加算しました。`;
+        if (leveledUp) {
+            msg += `\n${character.name || 'キャラクター'}はレベル${character.level}にアップ！`;
+        }
+        alert(msg);
+    }
+
     clearCharacterForm() {
             document.getElementById('characterName').value = '';
             document.getElementById('characterLevel').value = '1';
@@ -2585,7 +2798,10 @@ class App {
             // マスタ設定から選択肢を更新
             this.updateCharacterFormSelects();
             // ステータスフィールドを生成
-            this.generateCharacterStatsFields();
+            const masterStats = {};
+            const statsDef = masterManager.masterConfig.characterStats || [];
+            statsDef.forEach(stat => { masterStats[stat.id] = stat.defaultValue !== undefined ? stat.defaultValue : 0; });
+            this.generateCharacterStatsFields(masterStats);
             // ボーナスポイントUIを初期化
             this.initializeBonusAllocationUI();
             // ボーナスポイントセクションを非表示（レベル1なので）
@@ -2685,7 +2901,7 @@ class App {
             }
         };
         // 外部から参照できるようwindowに一時保存
-        window._editingCharacterSkills = selectedSkills;
+        window._editingCharacterSkills = [...selectedSkills];
     }
 
     updateCharacterFormSelects() {
@@ -2714,14 +2930,14 @@ class App {
         const container = document.getElementById('characterStatsFields');
         if (!container) return;
         const stats = masterManager.masterConfig.characterStats || [];
-        // 入力欄（基礎値）
         container.innerHTML = stats.map(stat => {
-            const value = (characterStatsObj[stat.id] !== undefined)
+            // 1. 編集/新規作成時の入力値 > 2. マスターのdefaultValue > 3. 0
+            const value = (characterStatsObj && characterStatsObj[stat.id] !== undefined)
                 ? characterStatsObj[stat.id]
                 : (stat.defaultValue !== undefined ? stat.defaultValue : 0);
             return `
                 <div class="form-group">
-                    <label for="characterStat_${stat.id}">${stat.label}</label>
+                    <label for="characterStat_${stat.id}">${stat.label}（初期ステータス）</label>
                     <input type="number" id="characterStat_${stat.id}" class="form-control character-stat-input" 
                         data-stat-id="${stat.id}" value="${value}" min="0">
                 </div>
@@ -2979,18 +3195,35 @@ class App {
             `;
 
             // スキル名を安全に取得
-            let skillNames = [];
+            // 系統ごとにスキルをまとめて表示（親子展開）
+            let skillSystemMap = {};
             if (Array.isArray(character.skills) && character.skills.length > 0) {
                 const allSkills = (this.dataStorage && typeof this.dataStorage.getAllSkills === 'function') ? this.dataStorage.getAllSkills() : [];
-                character.skills.forEach(id => {
-                    if (!id) return;
+                // 親子展開
+                const expandWithChildren = (id, arr) => {
+                    if (!id || arr.includes(id)) return;
+                    arr.push(id);
                     const skill = allSkills.find(s => s.id === id);
-                    if (skill && skill.name) {
-                        skillNames.push(skill.name);
-                    } else if (typeof id === 'string' && id.trim() !== '') {
-                        skillNames.push(id); // 自由記述や旧データ
+                    if (skill && skill.childIds && skill.childIds.length > 0) {
+                        skill.childIds.forEach(cid => expandWithChildren(cid, arr));
                     }
+                };
+                let expandedSkillIds = [];
+                character.skills.forEach(id => expandWithChildren(id, expandedSkillIds));
+                // 重複除去
+                expandedSkillIds = [...new Set(expandedSkillIds)];
+                expandedSkillIds.forEach(id => {
+                    const skill = allSkills.find(s => s.id === id);
+                    let system = (skill && skill.system) ? skill.system : 'その他';
+                    let name = (skill && skill.name) ? skill.name : (typeof id === 'string' ? id : '');
+                    if (!name) return;
+                    if (!skillSystemMap[system]) skillSystemMap[system] = [];
+                    skillSystemMap[system].push(name);
                 });
+            }
+            let skillNames = [];
+            for (const [system, names] of Object.entries(skillSystemMap)) {
+                skillNames.push(`${system}：${names.join(', ')}`);
             }
             html += `
                 <div class="data-card">
@@ -3009,7 +3242,7 @@ class App {
                             ${statsHtml}
                         </div>
                         ${character.personality ? `<p class="character-personality"><strong>性格:</strong> ${character.personality}</p>` : ''}
-                        <p class="character-skills"><strong>スキル:</strong> ${skillNames.length > 0 ? skillNames.join(', ') : 'なし'}</p>
+                        <p class="character-skills"><strong>スキル:</strong> ${skillNames.length > 0 ? skillNames.join(' ／ ') : 'なし'}</p>
                         ${tagsHtml}
                         <div class="data-card-actions">
                             <button class="btn btn-success btn-sm" onclick="app.addExpToCharacter('${character.id}')">経験値追加</button>
@@ -3095,7 +3328,7 @@ class App {
         if (elementEl) elementEl.value = character.element;
         
         // ステータスフィールドを基礎値で生成
-        this.generateCharacterStatsFields(character.stats);
+        this.generateCharacterStatsFields(character.stats || {});
 
         // ボーナスポイント振り分けUIを表示
         this.showBonusAllocation(character);
@@ -4151,7 +4384,6 @@ class App {
 
     async callPlotGenerationAPI(work, userPrompt) {
         // 実際のAI API呼び出しに置き換えられます
-        // ここではダミーデータを返します
         return new Promise((resolve) => {
             setTimeout(() => {
                 const chapters = this.plotManager.getChaptersByWorkId(work.id);
@@ -5381,6 +5613,8 @@ class App {
         }
     }
 
+   
+
     saveWorldSetting() {
         const currentWork = this.workManager.getCurrentWork();
         if (!currentWork) {
@@ -5533,7 +5767,7 @@ class App {
             const chapterTitle = chapter ? chapter.title : '不明';
             const characters = scene.characters.map(cId => {
                 const char = this.characterManager.getCharacter(cId);
-                return char ? char.name : '';
+                               return char ? char.name : '';
             }).filter(n => n).join(', ');
 
             html += `
@@ -6043,7 +6277,244 @@ class App {
 
         return text;
     }
-} // ← Appクラスの閉じカッコを追加
+
+    // データ一覧エクスポート（テキスト/CSV/Markdown）
+    exportListData(target, format) {
+        const escape = (s) => (s == null ? '' : String(s).replace(/\r?\n/g, ' '));
+        // データ取得
+        let data = [];
+        let headers = [];
+        let rows = [];
+        if (target === 'characters' || target === 'all') {
+            const chars = this.characterManager.getAllCharacters();
+            headers = ['名前','レベル','職業','種族','属性','性格','スキル','説明','タグ'];
+            chars.forEach(c => {
+                const skillNames = (Array.isArray(c.skills) && this.dataStorage.getAllSkills) ? c.skills.map(id => {
+                    const s = this.dataStorage.getAllSkills().find(s => s.id === id); return s ? s.name : id;
+                }) : [];
+                rows.push([
+                    c.name, c.level, c.job, c.race, c.element, c.personality,
+                    skillNames.join(','), c.description, (c.tags||[]).join(',')
+                ]);
+            });
+            if (target !== 'all') data = rows;
+        }
+        if (target === 'monsters' || target === 'all') {
+            const monsters = this.dataStorage.monsters;
+            const mHeaders = ['名前','危険度','レア度','経験値','スキル','説明','画像URL','ドロップ'];
+            const mRows = monsters.map(m => {
+                const skillNames = (Array.isArray(m.skills) && this.dataStorage.getAllSkills) ? m.skills.map(id => {
+                    const s = this.dataStorage.getAllSkills().find(s => s.id === id); return s ? s.name : id;
+                }) : [];
+                const drops = (m.dropItems||[]).map(d => `${d.itemName}(${d.probability})`).join(', ');
+                return [m.name, m.dangerLevel||m.danger, m.rarity, m.exp, skillNames.join(','), m.description, m.imageUrl, drops];
+            });
+            if (target === 'all') {
+                data.push('【モンスター一覧】');
+                data.push(mHeaders);
+                data = data.concat(mRows);
+            } else {
+                headers = mHeaders;
+                data = mRows;
+            }
+        }
+        if (target === 'items' || target === 'all') {
+            const items = this.dataStorage.items;
+            const iHeaders = ['名前','種類','レア度','効果','説明','画像URL','タグ'];
+            const iRows = items.map(i => [i.name, i.type, i.rarity, i.effect, i.description, i.imageUrl, (i.tags||[]).join(',')]);
+            if (target === 'all') {
+                data.push('【アイテム一覧】');
+                data.push(iHeaders);
+                data = data.concat(iRows);
+            } else {
+                headers = iHeaders;
+                data = iRows;
+            }
+        }
+        // 形式ごとに出力
+        if (format === 'csv') {
+            let csv = '';
+            if (target !== 'all') csv += headers.join(',') + '\n';
+            data.forEach(row => {
+                if (Array.isArray(row)) {
+                    csv += row.map(v => '"' + escape(v).replace(/"/g,'""') + '"').join(',') + '\n';
+                } else {
+                    csv += row + '\n';
+                }
+            });
+            return csv;
+        } else if (format === 'md') {
+            let md = '';
+            if (target === 'all') {
+                let section = '';
+                data.forEach(row => {
+                    if (typeof row === 'string') {
+                        if (section) md += '\n';
+                        md += `### ${row.replace(/[【】]/g,'')}`;
+                        section = row;
+                    } else if (Array.isArray(row)) {
+                        if (section) {
+                            md += '\n| ' + row.join(' | ') + ' |';
+                        } else {
+                            md += '\n| ' + row.join(' | ') + ' |';
+                        }
+                    }
+                });
+            } else {
+                md += '| ' + headers.join(' | ') + ' |\n|'+ headers.map(()=> '---').join('|') + '|\n';
+                data.forEach(row => {
+                    md += '| ' + row.map(escape).join(' | ') + ' |\n';
+                });
+            }
+            return md;
+        } else {
+            // テキスト
+            let txt = '';
+            if (target === 'all') {
+                data.forEach(row => {
+                    if (typeof row === 'string') {
+                        txt += '\n' + row + '\n';
+                    } else if (Array.isArray(row)) {
+                        txt += row.join(' / ') + '\n';
+                    }
+                });
+            } else {
+                txt += headers.join(' / ') + '\n';
+                data.forEach(row => {
+                    txt += row.map(escape).join(' / ') + '\n';
+                });
+            }
+            return txt;
+        }
+    }
+    // エクスポートUIイベント連携
+    setupExportUI() {
+        const exportBtn = document.getElementById('exportDataBtn');
+        const preview = document.getElementById('exportDataPreview');
+        const targetSel = document.getElementById('exportDataTarget');
+        const formatSel = document.getElementById('exportDataFormat');
+        const copyBtn = document.getElementById('copyExportDataBtn');
+        const saveBtn = document.getElementById('saveExportDataBtn');
+        if (!exportBtn || !preview || !targetSel || !formatSel || !copyBtn || !saveBtn) return;
+        let lastData = '';
+        exportBtn.onclick = () => {
+            const target = targetSel.value;
+            const format = formatSel.value;
+            const data = this.exportListData(target, format);
+            lastData = data;
+            preview.textContent = data;
+            preview.style.display = 'block';
+        };
+        copyBtn.onclick = () => {
+            if (lastData) {
+                navigator.clipboard.writeText(lastData);
+                alert('クリップボードにコピーしました');
+            }
+        };
+        saveBtn.onclick = () => {
+            if (lastData) {
+                const blob = new Blob([lastData], {type: 'text/plain'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const ext = formatSel.value === 'csv' ? 'csv' : (formatSel.value === 'md' ? 'md' : 'txt');
+                a.download = `rpg_export_${targetSel.value}_${new Date().toISOString().slice(0,10)}.${ext}`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        };
+    }
+    // --- アイテム効果UI用 ---
+    setupItemEffectUI() {
+        // 効果種類・箇所のマスタ取得
+        const effectTypes = (window.masterManager && window.masterManager.masterConfig && window.masterManager.masterConfig.itemEffectTypes)
+            ? window.masterManager.masterConfig.itemEffectTypes : ['HP回復', 'MP回復', '攻撃力上昇', '防御力上昇', '状態異常回復', 'ダメージ', 'バフ', 'デバフ', 'その他'];
+        const effectTargets = (window.masterManager && window.masterManager.masterConfig && window.masterManager.masterConfig.itemEffectTargets)
+            ? window.masterManager.masterConfig.itemEffectTargets : ['自分', '味方単体', '味方全体', '敵単体', '敵全体', '装備', 'その他'];
+
+        // セレクト生成
+        const typeSel = document.getElementById('itemEffectTypeInput');
+        const targetSel = document.getElementById('itemEffectTargetInput');
+        if (typeSel) {
+            typeSel.innerHTML = '';
+            effectTypes.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t; opt.textContent = t;
+                typeSel.appendChild(opt);
+            });
+        }
+        if (targetSel) {
+            targetSel.innerHTML = '';
+            effectTargets.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t; opt.textContent = t;
+                targetSel.appendChild(opt);
+            });
+        }
+
+        // 効果リスト初期化（新規時のみ）
+        if (!window._editingItemEffects) window._editingItemEffects = [];
+        this.renderItemEffectsList();
+        // 効果リスト初期表示時もitemEffectテキストへ反映
+        const effectInput = document.getElementById('itemEffect');
+        if (effectInput) effectInput.value = JSON.stringify(window._editingItemEffects || []);
+
+        // 追加ボタン
+        const addBtn = document.getElementById('addItemEffectBtn');
+        if (addBtn) {
+            addBtn.onclick = () => {
+                const type = typeSel.value;
+                const target = targetSel.value;
+                const value = document.getElementById('itemEffectValueInput').value;
+                const valueMax = document.getElementById('itemEffectValueMaxInput').value;
+                if (!type || !target || value === '') {
+                    alert('効果の種類・箇所・量を入力してください');
+                    return;
+                }
+                window._editingItemEffects.push({ type, target, value, valueMax });
+                this.renderItemEffectsList();
+                // 効果リストをitemEffectテキストボックスに反映
+                const effectInput = document.getElementById('itemEffect');
+                if (effectInput) effectInput.value = JSON.stringify(window._editingItemEffects);
+                // 入力欄クリア
+                document.getElementById('itemEffectValueInput').value = '';
+                document.getElementById('itemEffectValueMaxInput').value = '';
+            };
+        }
+    }
+
+    renderItemEffectsList() {
+        const container = document.getElementById('itemEffectsContainer');
+        if (!container) return;
+        const effects = window._editingItemEffects || [];
+        container.innerHTML = '';
+        effects.forEach((ef, idx) => {
+            const row = document.createElement('div');
+            row.className = 'item-effect-row';
+            row.style.display = 'flex';
+            row.style.gap = '8px';
+            row.style.alignItems = 'center';
+            row.style.marginBottom = '4px';
+            row.innerHTML =
+                `<span style="min-width:80px;">${ef.type}</span>` +
+                `<span style="min-width:80px;">${ef.target}</span>` +
+                `<span style="min-width:60px;">${ef.value}${ef.valueMax ? '～'+ef.valueMax : ''}</span>` +
+                `<button type="button" class="btn btn-danger btn-sm" data-idx="${idx}">削除</button>`;
+            container.appendChild(row);
+        });
+        // 効果リストをitemEffectテキストボックスに反映
+        const effectInput = document.getElementById('itemEffect');
+        if (effectInput) effectInput.value = JSON.stringify(window._editingItemEffects);
+        // 削除ボタン
+        container.querySelectorAll('button[data-idx]').forEach(btn => {
+            btn.onclick = (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                window._editingItemEffects.splice(idx, 1);
+                this.renderItemEffectsList();
+            };
+        });
+    }
+}
 
 // アプリケーション起動
 let app;

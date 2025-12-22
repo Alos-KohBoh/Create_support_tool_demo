@@ -4,6 +4,23 @@ class UIManager {
         this.currentChart = null;
     }
 
+    // スキルモーダルのセレクトボックス更新（系統・消費項目リスト）
+    updateSkillModalSelects(selectedSystem = '', selectedCostType = '') {
+        // 系統
+        const systemSelect = document.getElementById('skillSystem');
+        if (systemSelect && window.masterManager && Array.isArray(window.masterManager.masterConfig.skillSystems)) {
+            const systems = window.masterManager.masterConfig.skillSystems;
+            systemSelect.innerHTML = '<option value="">-- 系統を選択 --</option>' +
+                systems.map(s => `<option value="${s}"${selectedSystem === s ? ' selected' : ''}>${s}</option>`).join('');
+        }
+        // 消費項目
+        const costTypeSelect = document.getElementById('skillCostTypeSelect');
+        if (costTypeSelect && window.masterManager && Array.isArray(window.masterManager.masterConfig.characterStats)) {
+            costTypeSelect.innerHTML = '<option value="">-- ステータスから選択 --</option>' +
+                window.masterManager.masterConfig.characterStats.map(stat => `<option value="${stat.label}"${selectedCostType === stat.label ? ' selected' : ''}>${stat.label}</option>`).join('');
+        }
+    }
+
     // 確率を見やすく表示する
     formatProbability(probability) {
         if (!probability || probability <= 0) {
@@ -559,18 +576,35 @@ class UIManager {
                 </div>`;
 
                 // スキル名リストを取得
-                let skillNames = [];
+                // 系統ごとにスキルをまとめて表示
+                let skillSystemMap = {};
                 if (Array.isArray(monster.skills) && monster.skills.length > 0 && window.app && app.dataStorage && typeof app.dataStorage.getAllSkills === 'function') {
                     const allSkills = app.dataStorage.getAllSkills();
-                    monster.skills.forEach(id => {
-                        if (!id) return;
+                    // 親子展開
+                    const expandWithChildren = (id, arr) => {
+                        if (!id || arr.includes(id)) return;
+                        arr.push(id);
                         const skill = allSkills.find(s => s.id === id);
-                        if (skill && skill.name) {
-                            skillNames.push(skill.name);
-                        } else if (typeof id === 'string' && id.trim() !== '') {
-                            skillNames.push(id); // 自由記述や旧データ
+                        if (skill && skill.childIds && skill.childIds.length > 0) {
+                            skill.childIds.forEach(cid => expandWithChildren(cid, arr));
                         }
+                    };
+                    let expandedSkillIds = [];
+                    monster.skills.forEach(id => expandWithChildren(id, expandedSkillIds));
+                    // 重複除去
+                    expandedSkillIds = [...new Set(expandedSkillIds)];
+                    expandedSkillIds.forEach(id => {
+                        const skill = allSkills.find(s => s.id === id);
+                        let system = (skill && skill.system) ? skill.system : 'その他';
+                        let name = (skill && skill.name) ? skill.name : (typeof id === 'string' ? id : '');
+                        if (!name) return;
+                        if (!skillSystemMap[system]) skillSystemMap[system] = [];
+                        skillSystemMap[system].push(name);
                     });
+                }
+                let skillNames = [];
+                for (const [system, names] of Object.entries(skillSystemMap)) {
+                    skillNames.push(`${system}：${names.join(', ')}`);
                 }
                 return `
                     <div class="monster-card">
@@ -587,7 +621,7 @@ class UIManager {
                             ${levelHtml}
                             <h4>ステータス</h4>
                             ${statsHtml}
-                            <p class="monster-skills"><strong>スキル:</strong> ${skillNames.length > 0 ? skillNames.join(', ') : 'なし'}</p>
+                            <p class="monster-skills"><strong>スキル:</strong> ${skillNames.length > 0 ? skillNames.join(' ／ ') : 'なし'}</p>
                             <h4>ドロップテーブル</h4>
                             <div class="drop-items-list">
                                 ${dropItemsHtml}
@@ -667,9 +701,28 @@ class UIManager {
                     ? `<div class="description-text">${item.description}</div>`
                     : '';
 
-                const effectHtml = item.effect && item.effect.trim()
-                    ? `<div class="effect-text"><strong>効果:</strong> ${item.effect}</div>`
-                    : '';
+                let effectHtml = '';
+                if (item.effect && item.effect.trim()) {
+                    let effectText = '';
+                    try {
+                        const parsed = JSON.parse(item.effect);
+                        if (Array.isArray(parsed)) {
+                            effectText = parsed.map(e => {
+                                let txt = '';
+                                if (e.type) txt += e.type;
+                                if (e.target) txt += `(${e.target})`;
+                                if (e.value) txt += `:${e.value}`;
+                                if (e.valueMax) txt += `～${e.valueMax}`;
+                                return txt;
+                            }).join(' / ');
+                        } else {
+                            effectText = item.effect;
+                        }
+                    } catch {
+                        effectText = item.effect;
+                    }
+                    effectHtml = `<div class="effect-text"><strong>効果:</strong> ${effectText}</div>`;
+                }
 
                 return `
                     <div class="item-card">
